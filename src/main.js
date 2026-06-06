@@ -103,6 +103,8 @@ function update(dt) {
       continue;
     }
     if (e.type === 'gap') continue;
+    // Intentional: registerSmash() runs before multiplier() is read, so the smash
+    // that reaches a new combo tier is itself scored at the new (higher) multiplier.
     if (e.type === 'marine' && db && aabb(db, e)) {
       e.dead = true; registerSmash(run.combo); addSmash(run.score, multiplier(run.combo)); audio.smash();
       continue;
