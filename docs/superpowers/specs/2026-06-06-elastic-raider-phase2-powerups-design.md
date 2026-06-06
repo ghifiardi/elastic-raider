@@ -1,7 +1,7 @@
 # Elastic Raider — Phase 2 Design Spec: Power-ups + Early-Difficulty Tuning
 
 **Date:** 2026-06-06
-**Status:** Draft; awaiting design approval
+**Status:** Approved 2026-06-06 — ready for implementation planning
 **Builds on:** Phase 1 (Web MVP), merged to `main` (PR #1)
 **Phase 1 spec:** `docs/superpowers/specs/2026-06-06-elastic-raider-design.md`
 
@@ -43,6 +43,7 @@ isInvincible(s)           → s.gear > 0 || s.mercy > 0
 magnetActive(s)           → s.magnet > 0
 scoreMultiplier(s)        → s.multiplier > 0 ? MULTIPLIER_VALUE : 1
 consumeRevive(s)          → if s.revives > 0: s.revives -= 1; s.mercy = MERCY_DURATION; return true; else return false
+speedScale(s)             → 1 when no mercy; during mercy returns a factor that starts at REVIVE_SPEED_EASE (<1) and eases linearly back to 1 as the mercy timer runs down. Encapsulates the post-revive speed ease so main.js never inspects mercy timers directly.
 ```
 Plus a pure pickup helper (kept here since it is effect logic, not rendering):
 ```
@@ -68,7 +69,8 @@ Occasionally emit a power-up pickup (cadence ~1 per 8–12s of travel) chosen by
   - **marine smashed** if `(db && aabb(db,e))` *(dash)* OR `(gearActive && aabb(pb,e))` *(gear)* → dead; `registerSmash`; `addSmash(score, multiplier(combo) × scoreMultiplier(powerups))`; smash sfx.
   - **otherwise on `aabb(pb,e)` (unsmashed marine, or any crate):** if `isInvincible(powerups)` → phased (continue, no death, no points); else → `fatal()`.
 - After the loop: `overGap(player)` and `!isInvincible(powerups)` → `fatal()`.
-- **`fatal()`** helper: `if (consumeRevive(run.powerups)) { audio.revive(); return; }  endRun();` — Revive awards no points; on revive, run speed eases via `REVIVE_SPEED_EASE` and recovers over the mercy window.
+- **`fatal()`** helper: `if (consumeRevive(run.powerups)) { audio.revive(); return; }  endRun();` — Revive awards no points.
+- **Speed:** the effective run speed is `runSpeed(elapsed) × speedScale(run.powerups)`. `main.js` never reads `mercy` directly; the post-revive ease is fully encapsulated in `speedScale`.
 - Score multiplier everywhere = `multiplier(run.combo) × scoreMultiplier(run.powerups)`.
 
 ### 3.6 `engine/render.js` / `ui/screens.js`
@@ -82,7 +84,7 @@ Add `powerup()` (pickup) and `revive()` sfx.
 `tick(powerups,dt)` → (if magnet) `magnetPull` → existing collision loop, now also: pickup→activate; marine smashed by dash **or** gear; coin/smash score uses `combo × powerup`; unsmashed-obstacle/gap death gated by `isInvincible`, routed through `fatal()` (Revive-or-end). `render` adds pickups + active-effect indicators + revive count.
 
 ## 5. Testing
-- **New `tests/powerups.test.js`:** `activate` sets each timer / increments revives; `tick` decrements and expires to 0; re-activate refreshes (does not stack duration or strength); `isInvincible` true during gear and during mercy; `gearActive` true only during gear (not mercy); `scoreMultiplier` returns `MULTIPLIER_VALUE` while active else 1; `consumeRevive` decrements, returns true, starts mercy, and returns false when empty; `magnetPull` moves an in-radius coin toward the player, leaves out-of-radius coins and non-coins untouched.
+- **New `tests/powerups.test.js`:** `activate` sets each timer / increments revives; `tick` decrements and expires to 0; re-activate refreshes (does not stack duration or strength); `isInvincible` true during gear and during mercy; `gearActive` true only during gear (not mercy); `scoreMultiplier` returns `MULTIPLIER_VALUE` while active else 1; `consumeRevive` decrements, returns true, starts mercy, and returns false when empty; `speedScale` returns 1 with no mercy, `REVIVE_SPEED_EASE` immediately after `consumeRevive`, and eases back toward 1 as mercy ticks down; `magnetPull` moves an in-radius coin toward the player, leaves out-of-radius coins and non-coins untouched.
 - **Extend `tests/spawner.test.js`:** power-up emission is deterministic for a seed; emitted power-up types are within the allowed set; weighting keeps Revive rarest over a large sample; **early-game spacing guarantees a minimum first-obstacle gap** (tuning, §6).
 - **Update `tests/index.html`:** add a couple of power-up parity checks (e.g. `scoreMultiplier`, `consumeRevive`).
 - Existing 51 tests must continue to pass.
