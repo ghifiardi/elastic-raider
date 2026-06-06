@@ -1,7 +1,7 @@
 # Elastic Raider — Design Spec
 
 **Date:** 2026-06-06
-**Status:** Approved (design); ready for implementation planning
+**Status:** Draft; awaiting design approval
 **Working title:** Elastic Raider
 **Package id:** `com.ghifiardi.elasticraider`
 
@@ -9,7 +9,7 @@
 
 ## 1. Summary
 
-Elastic Raider is a single-plane, side-view **endless runner** with an attack mechanic. The raider auto-runs to the right at an ever-increasing speed. The player **jumps**, **slides**, and performs an **air-dash punch** that smashes enemies and chains a **combo multiplier**. Collect treasure (currency + score), survive hazards, and beat your high score. A later meta-layer adds in-run power-ups, a shop, and missions.
+Elastic Raider is a single-plane, side-view **endless runner** with an attack mechanic. The raider auto-runs to the right at an ever-increasing speed. The player **jumps**, **slides**, and performs an **air-dash punch** that smashes enemies and chains a **combo multiplier**. Collect treasure (run score; it also becomes persistent wallet currency from Phase 3 on), survive hazards, and beat your high score. A later meta-layer adds in-run power-ups, a shop, and missions.
 
 Built as a **vanilla JavaScript (ES modules) + HTML5 Canvas** web game with **no build step and no runtime dependencies**. Art and audio are generated procedurally in code. Android packaging via Capacitor is deferred to the final phase, after the web build's canvas sizing, touch controls, lifecycle, and persistence are stable.
 
@@ -40,7 +40,7 @@ Built as a **vanilla JavaScript (ES modules) + HTML5 Canvas** web game with **no
   - **Gap (water)** — fall in = game over.
   - *(stretch)* **Cannonball** — incoming projectile to jump/slide/dash.
 - **Combo:** consecutive dash-smashes (and coin pickups) raise a multiplier that decays if the chain breaks; multiplier scales score.
-- **Collectibles:** treasure/coins — both score and persistent currency.
+- **Collectibles:** treasure/coins — count toward run score from Phase 1; they additionally accumulate as persistent wallet currency starting in Phase 3.
 - **Fail state:** contact with a deadly hazard or falling in a gap → game over → show score + run summary → restart. (Revive consumable, Phase 2, can save one crash.)
 
 ## 4. Architecture (vanilla ES modules, no build)
@@ -67,7 +67,8 @@ game/
   scoring.js          distance + coins + combo → score (pure)
   powerups.js         [Phase 2] gear / magnet / multiplier / revive logic
 meta/
-  save.js             [Phase 3] localStorage: versioned schema, try/catch fallback
+  save.js             localStorage: versioned schema, try/catch fallback.
+                      Phase 1: high score only. Phase 3: extended to coins/unlocks/missions.
   shop.js             [Phase 3] characters/skins, persistent upgrades, starting loadout
   missions.js         [Phase 3] rolling daily missions + progress tracking
 ui/
@@ -95,7 +96,7 @@ input (events)
   → combat / scoring (resolve smashes, combo, distance, coins)
   → render (parallax bg → entities → player → HUD)
 ```
-Persistence (Phase 3) writes on game-over and on coin/mission changes.
+Persistence writes on game-over: high score in Phase 1; coins/unlocks/mission progress added in Phase 3.
 
 ## 6. Meta-progression (Phase 3)
 
@@ -121,7 +122,7 @@ Floating pickups during a run:
 ## 9. Testing
 
 - Seeded `rng.js` makes `spawner` output deterministic → reproducible spawner tests.
-- Unit-tested pure modules: `scoring`, `collision`, `combat`, `spawner`, and (Phase 3) `save` serialize/migrate and `missions` progress.
+- Unit-tested pure modules: `scoring`, `collision`, `combat`, `spawner`, and `save` serialize/migrate (high-score schema in Phase 1, extended schema in Phase 3); `missions` progress in Phase 3.
 - A simple test page (mirroring plumber-quest's test interface) runs these in-browser.
 
 ## 10. Build phasing
@@ -134,8 +135,9 @@ Floating pickups during a run:
 - scrolling world + parallax background
 - **≥ 3 hazard types** (marine grunt, barrel/crate, water gap)
 - dash-smash combat + combo multiplier
-- coins (score only in this phase)
-- AABB collision, scoring, **local high score**
+- coins (count toward run score only this phase — no wallet currency yet)
+- AABB collision, scoring
+- **local high score** via a minimal `meta/save.js` (high-score-only, versioned, try/catch fallback)
 - game-over screen + run summary + restart
 - basic procedural audio (jump, smash, coin, death sfx)
 
@@ -143,7 +145,7 @@ Floating pickups during a run:
 
 **Phase 2 — Power-ups.** Gear burst, Magnet, Multiplier, Revive (+ pickup spawning).
 
-**Phase 3 — Meta.** `save.js` (versioned persistence), `shop.js` (characters + upgrades), `missions.js` (rolling missions). Coins become persistent currency.
+**Phase 3 — Meta.** Extend `save.js` beyond high score to coins/unlocks/missions (same versioned schema, with migration); add `shop.js` (characters + upgrades) and `missions.js` (rolling missions). Coins become persistent wallet currency.
 
 **Phase 4 — Polish & ship.** Biome/visual variety, settings (audio/controls), then Capacitor Android integration + GitHub Action AAB build (reuse plumber-quest pipeline). Verify canvas sizing, touch controls, background/pause, and persistence on-device.
 
