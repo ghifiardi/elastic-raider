@@ -10,7 +10,9 @@ export const JUMP_CUT = 0.45;       // velocity kept when jump released while ri
 // Run speed curve (px/s of world scroll)
 export const RUN_SPEED_START = 320;
 export const RUN_SPEED_MAX = 820;
-export const RUN_SPEED_RAMP = 8;    // px/s added per second survived
+export const RUN_SPEED_RAMP = 6;    // px/s added per second survived (gentler early ramp)
+// Hazard-free opening so the first seconds are fair (meters of cumulative travel).
+export const SAFE_RUNWAY_M = 18;
 
 // Player
 export const PLAYER = { x: 180, w: 48, hStand: 64, hSlide: 32 };

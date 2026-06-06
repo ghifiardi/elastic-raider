@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeEntity, SIZES } from '../src/game/entities.js';
 import { runSpeed, createSpawner, spawnAhead } from '../src/game/spawner.js';
 import { createRng } from '../src/engine/rng.js';
-import { RUN_SPEED_START, RUN_SPEED_MAX, GROUND_Y } from '../src/data/constants.js';
+import { RUN_SPEED_START, RUN_SPEED_MAX, GROUND_Y, SAFE_RUNWAY_M } from '../src/data/constants.js';
 
 test('makeEntity sets size by type and rests a ground entity on the ground', () => {
   const m = makeEntity('marine', 500);
@@ -41,4 +41,19 @@ test('only known entity types are produced', () => {
   const types = new Set();
   for (let i = 0; i < 50; i++) spawnAhead(s, s.nextSpawnX, i * 100).forEach((e) => types.add(e.type));
   for (const t of types) assert.ok(['marine', 'crate', 'gap', 'coin'].includes(t));
+});
+
+test('no hazards spawn during the safe runway (distanceM < SAFE_RUNWAY_M)', () => {
+  const s = createSpawner(createRng(3));
+  const out = spawnAhead(s, 960, 0); // distance 0 → runway
+  const hazards = out.filter((e) => ['marine', 'crate', 'gap'].includes(e.type));
+  assert.equal(hazards.length, 0);
+  assert.ok(out.length >= 1); // runway still produces coins
+});
+
+test('hazards appear once past the safe runway', () => {
+  const s = createSpawner(createRng(3));
+  const out = spawnAhead(s, 960, SAFE_RUNWAY_M + 50);
+  const hazards = out.filter((e) => ['marine', 'crate', 'gap'].includes(e.type));
+  assert.ok(hazards.length >= 1);
 });
