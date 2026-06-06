@@ -57,3 +57,13 @@ test('hazards appear once past the safe runway', () => {
   const hazards = out.filter((e) => ['marine', 'crate', 'gap'].includes(e.type));
   assert.ok(hazards.length >= 1);
 });
+
+test('makeEntity creates floating power-up pickups with sizes', () => {
+  for (const t of ['gear', 'magnet', 'mult', 'revive']) {
+    const e = makeEntity(t, 700);
+    assert.equal(e.w, SIZES[t].w);
+    assert.equal(e.h, SIZES[t].h);
+    assert.equal(e.y, GROUND_Y - 120); // floats like a coin
+    assert.equal(e.collected, false);
+  }
+});
