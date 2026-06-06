@@ -43,7 +43,8 @@ export function updatePlayer(player, actions, dt) {
     player.onGround = false;
     player.state = 'jumping';
   }
-  // Variable jump height: releasing while rising cuts upward velocity once.
+  // Variable jump height: while rising with jump released, drain upward velocity
+  // each frame (exponential decay) for a snappy short-hop.
   if (!actions.jumpHeld && player.vy < 0) player.vy *= JUMP_CUT;
 
   // Gravity + vertical integration
