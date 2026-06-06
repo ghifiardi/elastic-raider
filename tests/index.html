@@ -14,6 +14,7 @@ import { createCombo, registerSmash, multiplier } from '../src/game/combat.js';
 import { createGame, start, MODES } from '../src/game/state.js';
 import { defaults, recordHighScore } from '../src/meta/save.js';
 import { createSpawner, spawnAhead } from '../src/game/spawner.js';
+import { createPowerups, activate, gearActive, isInvincible, scoreMultiplier, consumeRevive } from '../src/game/powerups.js';
 
 const out = document.getElementById('out');
 let passed = 0, failed = 0;
@@ -32,6 +33,14 @@ const g = createGame(); check('start transitions', start(g) && g.mode === MODES.
 const mem = new Map(); const ad = { getItem:(k)=>mem.has(k)?mem.get(k):null, setItem:(k,v)=>mem.set(k,v) };
 check('highscore record', recordHighScore(ad, 99) === 99);
 const sp = createSpawner(createRng(7)); check('spawner emits', spawnAhead(sp, 1000, 0).length >= 1);
+
+const pu = createPowerups();
+activate(pu, 'gear');
+check('gear → invincible + gearActive', gearActive(pu) && isInvincible(pu));
+activate(pu, 'mult');
+check('mult → scoreMultiplier 2', scoreMultiplier(pu) === 2);
+const pr = createPowerups(); pr.revives = 1;
+check('consumeRevive true then false', consumeRevive(pr) === true && consumeRevive(pr) === false);
 
 const sum = document.createElement('h2');
 sum.textContent = `${passed} passed, ${failed} failed`;
