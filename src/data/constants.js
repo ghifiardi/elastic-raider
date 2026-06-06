@@ -29,3 +29,18 @@ export const COMBO_WINDOW = 1.5;    // seconds a combo stays alive
 export const COMBO_MAX_MULT = 5;
 
 export function pxToMeters(px) { return px / PPM; }
+
+// Power-ups
+export const GEAR_DURATION = 5;        // s of invincibility + marine auto-smash
+export const MAGNET_DURATION = 6;      // s of coin attraction
+export const MULTIPLIER_DURATION = 8;  // s of score multiplier
+export const MERCY_DURATION = 1.5;     // s of post-revive invincibility
+export const MULTIPLIER_VALUE = 2;     // score-multiplier power-up factor
+export const MAGNET_RADIUS = 220;      // px coins are pulled within
+export const MAGNET_PULL_SPEED = 620;  // px/s coins move toward the player
+export const REVIVE_SPEED_EASE = 0.4;  // run speed eases to this fraction right after a revive
+
+// Power-up spawn cadence (world px between pickups) — roughly 1 per 8–12s
+export const POWERUP_FIRST_OFFSET = 1400;
+export const POWERUP_GAP_PX = 3600;
+export const POWERUP_GAP_JITTER = 2000;
