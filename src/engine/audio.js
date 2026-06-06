@@ -24,6 +24,8 @@ export function createAudio() {
     jump:  () => blip(520, 0.12, 'square'),
     smash: () => blip(180, 0.14, 'sawtooth', 0.09),
     coin:  () => blip(880, 0.10, 'triangle'),
+    powerup: () => { blip(700, 0.10, 'triangle'); setTimeout(() => blip(1040, 0.12, 'triangle'), 60); },
+    revive:  () => { blip(440, 0.16, 'sine', 0.09); setTimeout(() => blip(660, 0.22, 'sine', 0.09), 100); },
     death: () => { blip(200, 0.25, 'sawtooth', 0.1); setTimeout(() => blip(120, 0.35, 'sawtooth', 0.1), 90); },
   };
 }
