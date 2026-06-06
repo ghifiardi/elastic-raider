@@ -12,6 +12,10 @@ import { runSpeed } from './game/spawner.js';
 import { aabb, playerBox, dashBox } from './game/collision.js';
 import { createScore, addDistance, addCoin, addSmash, total } from './game/scoring.js';
 import { createCombo, registerSmash, tickCombo, multiplier } from './game/combat.js';
+import {
+  createPowerups, activate, tick as tickPowerups, gearActive, isInvincible,
+  magnetActive, scoreMultiplier, consumeRevive, speedScale, magnetPull,
+} from './game/powerups.js';
 import { createStorage } from './meta/storage.js';
 import { recordHighScore, load } from './meta/save.js';
 
@@ -36,6 +40,8 @@ let runCounter = 0;
 let highScore = load(storage).highScore;
 let lastResult = { score: 0, isNewBest: false };
 
+const PICKUPS = new Set(['gear', 'magnet', 'mult', 'revive']);
+
 function newRun() {
   const seed = (Date.now() ^ (runCounter++ * 2654435761)) >>> 0;
   const rng = createRng(seed);
@@ -45,6 +51,7 @@ function newRun() {
     world: createWorld(rng),
     score: createScore(),
     combo: createCombo(),
+    powerups: createPowerups(),
     elapsed: 0,
   };
 }
@@ -62,6 +69,12 @@ function endRun() {
   lastResult = { score: finalScore, isNewBest: finalScore > prevBest && finalScore > 0 };
   audio.death();
   gameOver(game);
+}
+
+// A fatal hit either burns a Revive (survival, no points) or ends the run.
+function fatal() {
+  if (consumeRevive(run.powerups)) { audio.revive(); return; }
+  endRun();
 }
 
 function overGap(p, entities) {
@@ -85,7 +98,8 @@ function update(dt) {
   if (game.mode !== MODES.PLAYING) return;
 
   run.elapsed += dt;
-  const speed = runSpeed(run.elapsed);
+  tickPowerups(run.powerups, dt);
+  const speed = runSpeed(run.elapsed) * speedScale(run.powerups);
 
   updatePlayer(run.player, actions, dt);
   if (actions.jumpPressed) audio.jump();
@@ -96,22 +110,40 @@ function update(dt) {
 
   const pb = playerBox(run.player);
   const db = dashBox(run.player);
+  if (magnetActive(run.powerups)) magnetPull(run.world.entities, pb, dt);
+
   for (const e of run.world.entities) {
     if (e.dead || e.collected) continue;
     if (e.type === 'coin') {
-      if (aabb(pb, e)) { e.collected = true; addCoin(run.score, multiplier(run.combo)); audio.coin(); }
+      if (aabb(pb, e)) {
+        e.collected = true;
+        addCoin(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups));
+        audio.coin();
+      }
+      continue;
+    }
+    if (PICKUPS.has(e.type)) {
+      if (aabb(pb, e)) { e.collected = true; activate(run.powerups, e.type); audio.powerup(); }
       continue;
     }
     if (e.type === 'gap') continue;
-    // Intentional: registerSmash() runs before multiplier() is read, so the smash
-    // that reaches a new combo tier is itself scored at the new (higher) multiplier.
-    if (e.type === 'marine' && db && aabb(db, e)) {
-      e.dead = true; registerSmash(run.combo); addSmash(run.score, multiplier(run.combo)); audio.smash();
+    // Marine smashed by dash OR by Gear. registerSmash before reading multiplier
+    // (intentional: the tier-reaching smash scores at the new multiplier).
+    if (e.type === 'marine' && ((db && aabb(db, e)) || (gearActive(run.powerups) && aabb(pb, e)))) {
+      e.dead = true;
+      registerSmash(run.combo);
+      addSmash(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups));
+      audio.smash();
       continue;
     }
-    if (aabb(pb, e)) { endRun(); return; }
+    // Unsmashed marine or any crate: phased while invincible, otherwise fatal.
+    if (aabb(pb, e)) {
+      if (isInvincible(run.powerups)) continue;
+      fatal();
+      return;
+    }
   }
-  if (overGap(run.player, run.world.entities)) { endRun(); return; }
+  if (overGap(run.player, run.world.entities) && !isInvincible(run.powerups)) { fatal(); return; }
 }
 
 function render() {
@@ -125,8 +157,12 @@ function render() {
   renderer.background(run.world.traveledPx);
   renderer.ground(run.world.entities);
   renderer.entitiesLayer(run.world.entities);
-  renderer.player(run.player);
-  screens.hud(total(run.score), multiplier(run.combo), highScore);
+  if (magnetActive(run.powerups)) renderer.magnetRing(playerBox(run.player));
+  renderer.player(run.player, isInvincible(run.powerups));
+  screens.hud(total(run.score), multiplier(run.combo), highScore, {
+    revives: run.powerups.revives,
+    scoreMult: scoreMultiplier(run.powerups),
+  });
   if (game.mode === MODES.GAMEOVER) screens.gameOver(lastResult.score, highScore, lastResult.isNewBest);
 }
 
