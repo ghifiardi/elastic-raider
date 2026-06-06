@@ -187,7 +187,7 @@ export const POWERUP_GAP_JITTER = 2000;
 - [ ] **Step 2: Verify it parses**
 
 Run: `cd ~/elastic-raider && node --check src/data/constants.js && node --test`
-Expected: parses; 53/53 still pass.
+Expected: parses; all tests still pass (0 failures).
 
 - [ ] **Step 3: Commit**
 
@@ -517,6 +517,15 @@ test('revive is the rarest power-up over a large sample', () => {
   assert.ok(count.revive < count.magnet, JSON.stringify(count));
   assert.ok(count.revive < count.mult, JSON.stringify(count));
 });
+
+test('every emitted entity (obstacle or power-up) is at or beyond the frontier', () => {
+  const s = createSpawner(createRng(21));
+  for (let i = 0; i < 30; i++) {
+    const frontier = s.nextSpawnX;
+    const out = spawnAhead(s, frontier, 100 + i * 100);
+    for (const e of out) assert.ok(e.x >= frontier, `${e.type} at ${e.x} < frontier ${frontier}`);
+  }
+});
 ```
 
 - [ ] **Step 2: Run to verify failure**
@@ -551,18 +560,17 @@ Replace `spawnAhead` (now also emits a power-up whenever the cursor crosses `nex
 ```js
 // Emit entities to fill space up to (frontierX + VIEW.W). Difficulty (distanceM)
 // shrinks the gap between obstacles. During the safe runway, only coins spawn.
-// Power-ups are emitted on their own cadence (nextPowerupX), independent of obstacles.
+// Obstacles and power-ups use two independent cursors; both are clamped to the
+// frontier so NOTHING is ever emitted behind frontierX.
 export function spawnAhead(spawner, frontierX, distanceM) {
   const out = [];
   const limit = frontierX + VIEW.W;
   const minGap = Math.max(220, 420 - distanceM * 0.5);
   const isRunway = distanceM < SAFE_RUNWAY_M;
+
+  // Obstacle / coin stream.
   if (spawner.nextSpawnX < frontierX) spawner.nextSpawnX = frontierX;
   while (spawner.nextSpawnX < limit) {
-    if (spawner.nextSpawnX >= spawner.nextPowerupX) {
-      out.push(makeEntity(pickPowerup(spawner.rng), spawner.nextPowerupX));
-      spawner.nextPowerupX += POWERUP_GAP_PX + spawner.rng.int(0, POWERUP_GAP_JITTER);
-    }
     const roll = spawner.rng.next();
     const type = isRunway ? 'coin'
       : roll < 0.4 ? 'marine' : roll < 0.65 ? 'crate' : roll < 0.8 ? 'gap' : 'coin';
@@ -570,6 +578,17 @@ export function spawnAhead(spawner, frontierX, distanceM) {
     const gap = minGap + spawner.rng.int(0, 180);
     spawner.nextSpawnX += SIZES[type].w + gap;
   }
+
+  // Power-up stream — its own cursor. A mark that has fallen behind the frontier
+  // (the world scrolled past it) is advanced over, never emitted; only marks
+  // within [frontierX, limit) are emitted. This guarantees x >= frontierX.
+  while (spawner.nextPowerupX < limit) {
+    if (spawner.nextPowerupX >= frontierX) {
+      out.push(makeEntity(pickPowerup(spawner.rng), spawner.nextPowerupX));
+    }
+    spawner.nextPowerupX += POWERUP_GAP_PX + spawner.rng.int(0, POWERUP_GAP_JITTER);
+  }
+
   return out;
 }
 ```
@@ -780,7 +799,7 @@ createLoop({ update, render }).start();
 - [ ] **Step 2: Static checks**
 
 Run: `cd ~/elastic-raider && node --check src/main.js && node --test`
-Expected: parses; 53/53 unit tests still pass (main.js has no unit tests).
+Expected: parses; all unit tests still pass with 0 failures (main.js has no unit tests).
 
 > Note: `render()` calls `renderer.magnetRing(...)` and `renderer.player(p, invincible)` and `screens.hud(..., {revives, scoreMult})` — these signatures are implemented in Tasks 7 and 8. The game will not fully render correctly until those land; that is expected. Do not browser-test until Task 8 is done (Task 10 covers it).
 
@@ -893,7 +912,7 @@ export function createRenderer(ctx) {
 - [ ] **Step 2: Static check**
 
 Run: `cd ~/elastic-raider && node --check src/engine/render.js && node --test`
-Expected: parses; 53/53 still pass.
+Expected: parses; all tests still pass (0 failures).
 
 - [ ] **Step 3: Commit**
 
@@ -955,7 +974,7 @@ export function createScreens(renderer) {
 - [ ] **Step 3: Static checks**
 
 Run: `cd ~/elastic-raider && node --check src/ui/screens.js src/engine/audio.js && node --test`
-Expected: parses; 53/53 still pass.
+Expected: parses; all tests still pass (0 failures).
 
 - [ ] **Step 4: Commit**
 
@@ -991,7 +1010,7 @@ check('consumeRevive true then false', consumeRevive(pr) === true && consumeRevi
 - [ ] **Step 2: Confirm Node suite unaffected**
 
 Run: `cd ~/elastic-raider && node --test`
-Expected: 53/53 (the HTML page adds no Node tests). Browser parity verified in Task 10.
+Expected: all Node tests pass with 0 failures (the HTML page adds no Node tests). Browser parity verified in Task 10.
 
 - [ ] **Step 3: Commit**
 
@@ -1040,4 +1059,3 @@ Expected: all pass (53 — 51 Phase 1 + powerups suite + new spawner tests; exac
 - Acceptance + playtest → Task 10. ✓
 - Boundaries: `powerups.js` pure (Task 3); `main.js` uses `speedScale()`/`isInvincible()` and never reads `mercy` directly (Task 6); Revive non-scoring (Task 6 `fatal()`); coins still run-score only, `save.js` untouched. ✓
 - Out of scope (shop/missions/Capacitor): no tasks create them. ✓
-```
