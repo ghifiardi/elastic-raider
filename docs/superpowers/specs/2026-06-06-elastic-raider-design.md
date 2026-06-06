@@ -1,7 +1,7 @@
 # Elastic Raider — Design Spec
 
 **Date:** 2026-06-06
-**Status:** Draft; awaiting design approval
+**Status:** Approved 2026-06-06 — Phase 1 ready for implementation planning
 **Working title:** Elastic Raider
 **Package id:** `com.ghifiardi.elasticraider`
 
