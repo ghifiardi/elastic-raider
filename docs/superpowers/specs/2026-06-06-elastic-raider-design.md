@@ -67,8 +67,12 @@ game/
   scoring.js          distance + coins + combo → score (pure)
   powerups.js         [Phase 2] gear / magnet / multiplier / revive logic
 meta/
-  save.js             localStorage: versioned schema, try/catch fallback.
+  save.js             PURE: versioned schema, defaults, read/write/migrate over an
+                      injected storage adapter ({getItem, setItem}). No window/localStorage.
                       Phase 1: high score only. Phase 3: extended to coins/unlocks/missions.
+  storage.js          tiny browser wrapper: localStorage-backed adapter + try/catch /
+                      in-memory fallback. The only place window.localStorage is touched.
+                      Wired into save.js from main.js.
   shop.js             [Phase 3] characters/skins, persistent upgrades, starting loadout
   missions.js         [Phase 3] rolling daily missions + progress tracking
 ui/
@@ -81,7 +85,7 @@ capacitor.config + GitHub Action (AAB)   [Phase 4] reused from plumber-quest
 
 **Boundary rules**
 - `spawner` only emits segment descriptors; `world` consumes them. Neither knows about scoring.
-- `collision`, `scoring`, `combat`, `spawner` (given a seeded RNG), and `save` are **pure logic** modules — no Canvas, no DOM, no `window` — so they unit-test directly.
+- `collision`, `scoring`, `combat`, `spawner` (given a seeded RNG), and `save` (given an injected storage adapter) are **pure logic** modules — no Canvas, no DOM, no `window` — so they unit-test directly. Browser storage lives only in `storage.js`, wired into `save` from `main.js`.
 - `state.js` owns lifecycle transitions; everything else reads the current mode and reacts. No lifecycle branching scattered in `main.js`/`screens.js`.
 - Rendering reads game state; it never mutates it.
 
@@ -109,12 +113,12 @@ Persistence writes on game-over: high score in Phase 1; coins/unlocks/mission pr
 Floating pickups during a run:
 - **Gear burst** — temporary invincibility + auto-smash all enemies.
 - **Magnet** — pulls nearby treasure toward the player for a duration.
-- **Score×Multiplier** — 2×/3× score & coins for a short window.
+- **Score×Multiplier** — 2×/3× score and coin pickup value for a short window. (Wallet effects only apply once persistent currency exists in Phase 3; in Phase 2 it multiplies run score.)
 - **Revive** — rare consumable; revives once after a crash (eases speed on revive).
 
 ## 8. Error handling & platform concerns
 
-- **Persistence:** wrap localStorage in try/catch; on unavailable/full, fall back to in-memory state. Save records carry a schema **version** for forward migration.
+- **Persistence:** `storage.js` wraps localStorage in try/catch; on unavailable/full it falls back to an in-memory adapter. `save.js` (pure, adapter-injected) stays unaware of which backing it got. Save records carry a schema **version** for forward migration.
 - **Audio:** Web Audio context created/resumed only after the first user gesture (autoplay policy).
 - **Lifecycle:** the loop pauses and the run timer freezes on tab blur / app background; resumes cleanly.
 - **Display:** canvas scales to device pixel ratio and viewport; logical game units are resolution-independent.
@@ -137,7 +141,7 @@ Floating pickups during a run:
 - dash-smash combat + combo multiplier
 - coins (count toward run score only this phase — no wallet currency yet)
 - AABB collision, scoring
-- **local high score** via a minimal `meta/save.js` (high-score-only, versioned, try/catch fallback)
+- **local high score** via a minimal pure `meta/save.js` (high-score-only, versioned) over a `meta/storage.js` localStorage adapter (try/catch + in-memory fallback)
 - game-over screen + run summary + restart
 - basic procedural audio (jump, smash, coin, death sfx)
 
