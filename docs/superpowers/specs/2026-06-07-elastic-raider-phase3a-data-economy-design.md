@@ -1,7 +1,7 @@
 # Elastic Raider — Phase 3a Design Spec: Data Model & Economy Foundation
 
 **Date:** 2026-06-07
-**Status:** Draft; awaiting design approval
+**Status:** Approved 2026-06-07 — ready for implementation planning
 **Builds on:** Phases 1 + 2 (merged to `main`)
 **Part of:** Phase 3 (meta-progression). This is sub-phase **3a** — the data/economy foundation. Shop/upgrades (3b), characters/perks (3c), and missions (3d) are separate specs that build on this.
 
@@ -41,7 +41,7 @@ Migrate persistence from the v1 high-score-only schema to a versioned v2 schema 
     coinsBankedTotal: 0,
     distanceTotalM: 0,
     smashesTotal: 0,
-    bestCombo: 0,
+    bestComboCount: 0,        // peak combo CHAIN count (combo.count), not the displayed multiplier
   },
 }
 ```
@@ -52,9 +52,9 @@ defaults() → the v2 object above (fresh)
 migrate(raw) → a valid current-version object (see §3.2)
 load(adapter) → migrate(JSON.parse(adapter.getItem(KEY))) with corrupt/empty → defaults()
 save(adapter, data) → adapter.setItem(KEY, JSON.stringify(migrate(data)))
-updateHighScore(save, score) → bool   // mutates save.highScore if score > current; returns true if a new best
+updateHighScore(saveData, score) → bool   // mutates saveData.highScore if score > current; returns true if a new best
 ```
-**`recordHighScore(adapter, score)` is removed.** The v1 high-score-only path is gone; `main` owns the full save object and persists it once (see §5). `updateHighScore` is a pure mutator on the in-memory save object.
+**`recordHighScore(adapter, score)` is removed.** The v1 high-score-only path is gone; `main` owns the full save object and persists it once (see §5). `updateHighScore` is a pure mutator on the in-memory save object. Its parameter is named `saveData` (NOT `save`) to avoid shadowing the exported `save()` function in this module.
 
 ### 3.2 Migration — the key risk
 - `CURRENT_VERSION = 2`. A `MIGRATIONS` map keyed by *source* version holds forward steps: `{ 1: (s) => v2FromV1(s) }`.
@@ -78,11 +78,11 @@ earn(save, n) → void              // save.coins += n
 // Build a mission-agnostic snapshot from the run's score state. Takes the SCORE
 // OBJECT (scoreState), NOT total(score). Fields derive from scoreState.distance,
 // scoreState.coins, scoreState.smashes; maxCombo is passed separately.
-makeRunSummary(scoreState, maxCombo) → {
+makeRunSummary(scoreState, maxComboCount) → {
   distanceM: Math.floor(scoreState.distance),
   coins: scoreState.coins,
   smashes: scoreState.smashes,
-  maxCombo,
+  maxComboCount,            // peak combo CHAIN count, passed in (see §5)
 }
 
 // Apply a finished run to the save: bank coins (raw count) + accumulate lifetime stats.
@@ -92,17 +92,17 @@ bankRun(save, summary) → number   // returns coins banked (summary.coins)
 //   stats.coinsBankedTotal += summary.coins
 //   stats.distanceTotalM   += summary.distanceM
 //   stats.smashesTotal     += summary.smashes
-//   stats.bestCombo = Math.max(stats.bestCombo, summary.maxCombo)
+//   stats.bestComboCount = Math.max(stats.bestComboCount, summary.maxComboCount)
 ```
 Banking uses the **raw coin count** (`summary.coins`); the Score Multiplier remains score-only and never inflates the wallet. The just-ended run's coins are included.
 
 ## 5. Integration (`main.js`)
 
 - **Boot:** `const saveData = load(storage)` — hold the full v2 object (not just a highScore number). `let saveData` so it persists across runs in memory.
-- **Per run:** `newRun()` sets `run.maxCombo = 0`. Wherever `registerSmash(run.combo)` is called, also `run.maxCombo = Math.max(run.maxCombo, run.combo.count)` (peak combo, since `combo.count` decays).
+- **Per run:** `newRun()` sets `run.maxComboCount = 0`. Wherever `registerSmash(run.combo)` is called, also `run.maxComboCount = Math.max(run.maxComboCount, run.combo.count)` — the peak combo CHAIN count (since `combo.count` decays). This is the chain count, NOT `multiplier(run.combo)`.
 - **Game over (`endRun`):**
   ```js
-  const summary = makeRunSummary(run.score, run.maxCombo);
+  const summary = makeRunSummary(run.score, run.maxComboCount);
   const banked = bankRun(saveData, summary);
   const isNewBest = updateHighScore(saveData, total(run.score));
   save(storage, saveData);
@@ -134,8 +134,8 @@ These are the only UI additions; they exist so the economy is verifiable in the 
 
 **`tests/economy.test.js`** (new):
 - `earn` adds; `canAfford` boundary (cost == balance is affordable); `spend` deducts on success, returns false + leaves balance untouched when insufficient.
-- `makeRunSummary` derives `{distanceM: floor(distance), coins, smashes, maxCombo}` from a score state object.
-- `bankRun` earns `summary.coins`, increments `runs`, accumulates `coinsBankedTotal`/`distanceTotalM`/`smashesTotal`, takes `max` for `bestCombo`, and returns the banked amount.
+- `makeRunSummary` derives `{distanceM: floor(distance), coins, smashes, maxComboCount}` from a score state object + passed chain count.
+- `bankRun` earns `summary.coins`, increments `runs`, accumulates `coinsBankedTotal`/`distanceTotalM`/`smashesTotal`, takes `max` for `bestComboCount`, and returns the banked amount.
 
 **`tests/index.html`**: replace the old `recordHighScore` parity check with `updateHighScore`; add an `earn`/`spend` economy check.
 
