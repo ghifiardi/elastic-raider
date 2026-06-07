@@ -15,6 +15,7 @@ export function updateWorld(world, dt, speed) {
   const move = speed * dt;
   world.traveledPx += move;
   world.spawner.nextSpawnX -= move;
+  world.spawner.nextPowerupX -= move;
   for (const e of world.entities) e.x -= move;
   world.entities = world.entities.filter(
     (e) => e.x + e.w > -CULL_MARGIN && !e.collected && !e.dead,
