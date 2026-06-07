@@ -1,4 +1,5 @@
 import { VIEW, GROUND_Y, PLAYER, DASH_REACH, MAGNET_RADIUS } from '../data/constants.js';
+import { drawSky, drawClouds, drawIslands, drawSea, drawDock, drawWaterGap } from './sprites.js';
 
 const COLORS = {
   sky: '#0b1020', skyBand: '#16224a', ground: '#2b1d12', groundTop: '#5a3c22',
@@ -13,23 +14,16 @@ const PICKUP_COLOR = { gear: COLORS.gear, magnet: COLORS.magnet, mult: COLORS.mu
 export function createRenderer(ctx) {
   function clear() { ctx.fillStyle = COLORS.sky; ctx.fillRect(0, 0, VIEW.W, VIEW.H); }
 
-  // Parallax: distant band scrolls slower than the foreground.
   function background(traveledPx, t = 0) {
-    const off = (traveledPx * 0.2) % VIEW.W;
-    ctx.fillStyle = COLORS.skyBand;
-    for (let i = -1; i < 3; i++) {
-      const x = i * 320 - off;
-      ctx.fillRect(x, 180, 220, 120);
-    }
+    drawSky(ctx);
+    drawClouds(ctx, traveledPx, t);
+    drawIslands(ctx, traveledPx);
+    drawSea(ctx, traveledPx, t);
   }
 
   function ground(entities, t = 0) {
-    ctx.fillStyle = COLORS.ground;
-    ctx.fillRect(0, GROUND_Y, VIEW.W, VIEW.H - GROUND_Y);
-    ctx.fillStyle = COLORS.groundTop;
-    ctx.fillRect(0, GROUND_Y, VIEW.W, 6);
-    ctx.fillStyle = COLORS.gap;
-    for (const e of entities) if (e.type === 'gap') ctx.fillRect(e.x, GROUND_Y, e.w, VIEW.H - GROUND_Y);
+    drawDock(ctx);
+    for (const e of entities) if (e.type === 'gap') drawWaterGap(ctx, e.x, e.w, t);
   }
 
   function entitiesLayer(entities, t = 0) {
