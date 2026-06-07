@@ -89,3 +89,33 @@ export function drawWaterGap(ctx, x, w, t) {
   }
   ctx.stroke(); ctx.globalAlpha = 1;
 }
+
+export function drawBarrel(ctx, e) {
+  const { x, y, w, h } = e;
+  ctx.fillStyle = PALETTE.wood; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = PALETTE.woodDark; ctx.globalAlpha = 0.3;
+  ctx.fillRect(x, y, 4, h); ctx.fillRect(x + w - 4, y, 4, h);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = PALETTE.band;
+  ctx.fillRect(x, y + h * 0.18, w, 4);
+  ctx.fillRect(x, y + h * 0.70, w, 4);
+}
+
+export function drawMarine(ctx, e) {
+  const { x, y, w, h } = e;
+  ctx.fillStyle = PALETTE.coat;  ctx.fillRect(x, y + h * 0.30, w, h * 0.70);
+  ctx.fillStyle = PALETTE.coatDark; ctx.fillRect(x, y + h * 0.60, w, 4);
+  ctx.fillStyle = PALETTE.skin;  ctx.fillRect(x + w * 0.25, y + h * 0.12, w * 0.50, h * 0.20);
+  ctx.fillStyle = PALETTE.cap;   ctx.fillRect(x + w * 0.16, y + h * 0.02, w * 0.68, h * 0.12);
+  ctx.fillStyle = PALETTE.capBand; ctx.fillRect(x + w * 0.16, y + h * 0.12, w * 0.68, 3);
+}
+
+export function drawCoin(ctx, e, t) {
+  const cx = e.x + e.w / 2, cy = e.y + e.h / 2, r = e.w / 2;
+  const sx = Math.max(0.15, Math.abs(Math.cos(t * 4 + e.x * 0.05)));
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(sx, 1);
+  ctx.fillStyle = PALETTE.coin; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = PALETTE.coinShine; ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.3, r * 0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}

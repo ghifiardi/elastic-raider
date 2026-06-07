@@ -1,5 +1,5 @@
 import { VIEW, GROUND_Y, PLAYER, DASH_REACH, MAGNET_RADIUS } from '../data/constants.js';
-import { drawSky, drawClouds, drawIslands, drawSea, drawDock, drawWaterGap } from './sprites.js';
+import { drawSky, drawClouds, drawIslands, drawSea, drawDock, drawWaterGap, drawBarrel, drawMarine, drawCoin } from './sprites.js';
 
 const COLORS = {
   sky: '#0b1020', skyBand: '#16224a', ground: '#2b1d12', groundTop: '#5a3c22',
@@ -29,19 +29,15 @@ export function createRenderer(ctx) {
   function entitiesLayer(entities, t = 0) {
     for (const e of entities) {
       if (e.type === 'gap') continue;
-      if (e.type === 'coin') {
-        ctx.fillStyle = COLORS.coin;
-        ctx.beginPath(); ctx.arc(e.x + e.w / 2, e.y + e.h / 2, e.w / 2, 0, Math.PI * 2); ctx.fill();
-      } else if (PICKUP_COLOR[e.type]) {
-        // Power-up pickup: filled diamond in its theme color.
+      if (e.type === 'coin') { drawCoin(ctx, e, t); continue; }
+      if (e.type === 'marine') { drawMarine(ctx, e); continue; }
+      if (e.type === 'crate') { drawBarrel(ctx, e); continue; }
+      if (PICKUP_COLOR[e.type]) {
         const cx = e.x + e.w / 2, cy = e.y + e.h / 2, r = e.w / 2;
         ctx.fillStyle = PICKUP_COLOR[e.type];
         ctx.beginPath();
         ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy);
         ctx.closePath(); ctx.fill();
-      } else {
-        ctx.fillStyle = e.type === 'marine' ? COLORS.marine : COLORS.crate;
-        ctx.fillRect(e.x, e.y, e.w, e.h);
       }
     }
   }
