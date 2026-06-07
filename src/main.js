@@ -40,6 +40,7 @@ const saveData = load(storage);        // full v2 save object, persisted across 
 let run = null;
 let runCounter = 0;
 let lastResult = { score: 0, isNewBest: false, banked: 0, wallet: saveData.coins };
+let clock = 0; // seconds, advanced every frame (drives sprite animation in all modes)
 
 const PICKUPS = new Set(['gear', 'magnet', 'mult', 'revive']);
 
@@ -93,6 +94,7 @@ function overGap(p, entities) {
 }
 
 function update(dt) {
+  clock += dt;
   const actions = input.consume();
 
   if (game.mode === MODES.MENU || game.mode === MODES.GAMEOVER) {
@@ -154,16 +156,16 @@ function update(dt) {
 function render() {
   renderer.clear();
   if (game.mode === MODES.MENU) {
-    renderer.background(0);
-    renderer.ground([]);
+    renderer.background(0, clock);
+    renderer.ground([], clock);
     screens.menu(saveData.coins);
     return;
   }
-  renderer.background(run.world.traveledPx);
-  renderer.ground(run.world.entities);
-  renderer.entitiesLayer(run.world.entities);
+  renderer.background(run.world.traveledPx, clock);
+  renderer.ground(run.world.entities, clock);
+  renderer.entitiesLayer(run.world.entities, clock);
   if (magnetActive(run.powerups)) renderer.magnetRing(playerBox(run.player));
-  renderer.player(run.player, isInvincible(run.powerups));
+  renderer.player(run.player, isInvincible(run.powerups), clock);
   screens.hud(total(run.score), multiplier(run.combo), saveData.highScore, {
     revives: run.powerups.revives,
     scoreMult: scoreMultiplier(run.powerups),

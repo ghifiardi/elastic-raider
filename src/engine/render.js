@@ -14,7 +14,7 @@ export function createRenderer(ctx) {
   function clear() { ctx.fillStyle = COLORS.sky; ctx.fillRect(0, 0, VIEW.W, VIEW.H); }
 
   // Parallax: distant band scrolls slower than the foreground.
-  function background(traveledPx) {
+  function background(traveledPx, t = 0) {
     const off = (traveledPx * 0.2) % VIEW.W;
     ctx.fillStyle = COLORS.skyBand;
     for (let i = -1; i < 3; i++) {
@@ -23,7 +23,7 @@ export function createRenderer(ctx) {
     }
   }
 
-  function ground(entities) {
+  function ground(entities, t = 0) {
     ctx.fillStyle = COLORS.ground;
     ctx.fillRect(0, GROUND_Y, VIEW.W, VIEW.H - GROUND_Y);
     ctx.fillStyle = COLORS.groundTop;
@@ -32,7 +32,7 @@ export function createRenderer(ctx) {
     for (const e of entities) if (e.type === 'gap') ctx.fillRect(e.x, GROUND_Y, e.w, VIEW.H - GROUND_Y);
   }
 
-  function entitiesLayer(entities) {
+  function entitiesLayer(entities, t = 0) {
     for (const e of entities) {
       if (e.type === 'gap') continue;
       if (e.type === 'coin') {
@@ -61,7 +61,7 @@ export function createRenderer(ctx) {
     ctx.restore();
   }
 
-  function player(p, invincible = false) {
+  function player(p, invincible = false, t = 0) {
     if (invincible) {
       ctx.save();
       ctx.globalAlpha = 0.5; ctx.fillStyle = COLORS.glow;
