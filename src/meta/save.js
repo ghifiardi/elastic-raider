@@ -1,12 +1,53 @@
 const KEY = 'elastic-raider:save';
-const VERSION = 1;
+const CURRENT_VERSION = 2;
 
-export function defaults() { return { version: VERSION, highScore: 0 }; }
+export function defaults() {
+  return {
+    version: CURRENT_VERSION,
+    highScore: 0,
+    coins: 0,
+    unlocks: [],
+    upgrades: {},
+    missions: {},
+    stats: { runs: 0, coinsBankedTotal: 0, distanceTotalM: 0, smashesTotal: 0, bestComboCount: 0 },
+  };
+}
+
+// Forward migrators keyed by SOURCE version. Each maps vN → vN+1.
+const MIGRATIONS = {
+  1: (s) => ({
+    version: 2,
+    highScore: Number(s.highScore) || 0,
+    coins: 0,
+    unlocks: [],
+    upgrades: {},
+    missions: {},
+    stats: { runs: 0, coinsBankedTotal: 0, distanceTotalM: 0, smashesTotal: 0, bestComboCount: 0 },
+  }),
+};
 
 export function migrate(raw) {
-  const base = defaults();
-  if (!raw || typeof raw !== 'object') return base;
-  return { version: VERSION, highScore: Number(raw.highScore) || 0 };
+  if (!raw || typeof raw !== 'object') return defaults();
+  let v = Math.floor(Number(raw.version) || 1); // missing/falsy/float version ⇒ floor to a valid step
+  if (v > CURRENT_VERSION) return defaults(); // a save from a newer app; don't risk a bad downgrade
+  let data = raw;
+  while (v < CURRENT_VERSION) { data = MIGRATIONS[v](data); v += 1; }
+  return fillDefaults(data);
+}
+
+// Rebuild the object from known keys only (evicting any unknown/legacy top-level
+// fields) and deep-fill the nested `stats`. Uses ?? so legitimate 0/[]/{} are kept.
+function fillDefaults(data) {
+  const d = defaults();
+  return {
+    version: CURRENT_VERSION,
+    highScore: data.highScore ?? d.highScore,
+    coins: data.coins ?? d.coins,
+    unlocks: data.unlocks ?? d.unlocks,
+    upgrades: data.upgrades ?? d.upgrades,
+    missions: data.missions ?? d.missions,
+    stats: { ...d.stats, ...(data.stats || {}) },
+  };
 }
 
 export function load(adapter) {
@@ -20,8 +61,9 @@ export function save(adapter, data) {
   adapter.setItem(KEY, JSON.stringify(migrate(data)));
 }
 
-export function recordHighScore(adapter, score) {
-  const data = load(adapter);
-  if (score > data.highScore) { data.highScore = score; save(adapter, data); }
-  return data.highScore;
+// Pure mutator on the in-memory save object. Parameter is `saveData` (NOT `save`)
+// to avoid shadowing the exported save() function above.
+export function updateHighScore(saveData, score) {
+  if (score > saveData.highScore) { saveData.highScore = score; return true; }
+  return false;
 }

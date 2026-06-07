@@ -17,7 +17,8 @@ import {
   magnetActive, scoreMultiplier, consumeRevive, speedScale, magnetPull,
 } from './game/powerups.js';
 import { createStorage } from './meta/storage.js';
-import { recordHighScore, load } from './meta/save.js';
+import { load, save, updateHighScore } from './meta/save.js';
+import { makeRunSummary, bankRun } from './meta/economy.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -35,10 +36,10 @@ const audio = createAudio();
 const input = createInput(window);
 
 const game = createGame();
+const saveData = load(storage);        // full v2 save object, persisted across runs in memory
 let run = null;
 let runCounter = 0;
-let highScore = load(storage).highScore;
-let lastResult = { score: 0, isNewBest: false };
+let lastResult = { score: 0, isNewBest: false, banked: 0, wallet: saveData.coins };
 
 const PICKUPS = new Set(['gear', 'magnet', 'mult', 'revive']);
 
@@ -53,6 +54,7 @@ function newRun() {
     combo: createCombo(),
     powerups: createPowerups(),
     elapsed: 0,
+    maxComboCount: 0,
   };
 }
 
@@ -64,9 +66,11 @@ function beginPlaying() {
 
 function endRun() {
   const finalScore = total(run.score);
-  const prevBest = highScore;
-  highScore = recordHighScore(storage, finalScore);
-  lastResult = { score: finalScore, isNewBest: finalScore > prevBest && finalScore > 0 };
+  const summary = makeRunSummary(run.score, run.maxComboCount);
+  const banked = bankRun(saveData, summary);
+  const isNewBest = updateHighScore(saveData, finalScore);
+  save(storage, saveData);
+  lastResult = { score: finalScore, isNewBest, banked, wallet: saveData.coins };
   audio.death();
   gameOver(game);
 }
@@ -132,6 +136,7 @@ function update(dt) {
     if (e.type === 'marine' && ((db && aabb(db, e)) || (gearActive(run.powerups) && aabb(pb, e)))) {
       e.dead = true;
       registerSmash(run.combo);
+      run.maxComboCount = Math.max(run.maxComboCount, run.combo.count);
       addSmash(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups));
       audio.smash();
       continue;
@@ -151,7 +156,7 @@ function render() {
   if (game.mode === MODES.MENU) {
     renderer.background(0);
     renderer.ground([]);
-    screens.menu();
+    screens.menu(saveData.coins);
     return;
   }
   renderer.background(run.world.traveledPx);
@@ -159,11 +164,13 @@ function render() {
   renderer.entitiesLayer(run.world.entities);
   if (magnetActive(run.powerups)) renderer.magnetRing(playerBox(run.player));
   renderer.player(run.player, isInvincible(run.powerups));
-  screens.hud(total(run.score), multiplier(run.combo), highScore, {
+  screens.hud(total(run.score), multiplier(run.combo), saveData.highScore, {
     revives: run.powerups.revives,
     scoreMult: scoreMultiplier(run.powerups),
   });
-  if (game.mode === MODES.GAMEOVER) screens.gameOver(lastResult.score, highScore, lastResult.isNewBest);
+  if (game.mode === MODES.GAMEOVER) {
+    screens.gameOver(lastResult.score, saveData.highScore, lastResult.isNewBest, lastResult.banked, lastResult.wallet);
+  }
 }
 
 createLoop({ update, render }).start();

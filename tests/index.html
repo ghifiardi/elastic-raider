@@ -12,7 +12,8 @@ import { aabb } from '../src/game/collision.js';
 import { createScore, addCoin, total } from '../src/game/scoring.js';
 import { createCombo, registerSmash, multiplier } from '../src/game/combat.js';
 import { createGame, start, MODES } from '../src/game/state.js';
-import { defaults, recordHighScore } from '../src/meta/save.js';
+import { defaults, updateHighScore } from '../src/meta/save.js';
+import { earn, spend, walletBalance } from '../src/meta/economy.js';
 import { createSpawner, spawnAhead } from '../src/game/spawner.js';
 import { createPowerups, activate, gearActive, isInvincible, scoreMultiplier, consumeRevive } from '../src/game/powerups.js';
 
@@ -30,8 +31,10 @@ check('aabb overlap', aabb({x:0,y:0,w:10,h:10},{x:5,y:5,w:10,h:10}) === true);
 const s = createScore(); addCoin(s, 2); check('coin score', total(s) === 20);
 const c = createCombo(); for (let i=0;i<3;i++) registerSmash(c); check('combo mult', multiplier(c) === 2);
 const g = createGame(); check('start transitions', start(g) && g.mode === MODES.PLAYING);
-const mem = new Map(); const ad = { getItem:(k)=>mem.has(k)?mem.get(k):null, setItem:(k,v)=>mem.set(k,v) };
-check('highscore record', recordHighScore(ad, 99) === 99);
+const sv = defaults();
+check('updateHighScore new best', updateHighScore(sv, 99) === true && sv.highScore === 99);
+const w = defaults(); earn(w, 50);
+check('earn/spend wallet', spend(w, 30) === true && walletBalance(w) === 20 && spend(w, 999) === false);
 const sp = createSpawner(createRng(7)); check('spawner emits', spawnAhead(sp, 1000, 0).length >= 1);
 
 const pu = createPowerups();
