@@ -77,7 +77,7 @@ earn(save, n) → void              // save.coins += n
 
 // Build a mission-agnostic snapshot from the run's score state. Takes the SCORE
 // OBJECT (scoreState), NOT total(score). Fields derive from scoreState.distance,
-// scoreState.coins, scoreState.smashes; maxCombo is passed separately.
+// scoreState.coins, scoreState.smashes; maxComboCount is passed separately.
 makeRunSummary(scoreState, maxComboCount) → {
   distanceM: Math.floor(scoreState.distance),
   coins: scoreState.coins,
