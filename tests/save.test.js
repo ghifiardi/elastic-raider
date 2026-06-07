@@ -85,6 +85,21 @@ test('updateHighScore mutates + returns true on a new best, false otherwise', ()
   assert.equal(d.highScore, 100);
 });
 
+test('migrate tolerates a non-integer version (floors it, no crash)', () => {
+  // A float version must not crash via MIGRATIONS[1.5]; it floors to v1 and migrates.
+  const out = migrate({ version: 1.5, highScore: 5 });
+  assert.equal(out.version, 2);
+  assert.equal(out.highScore, 5);
+});
+
+test('migrate evicts unknown top-level keys', () => {
+  const out = migrate({ version: 2, highScore: 3, coins: 0, unlocks: [], upgrades: {}, missions: {},
+    stats: { runs: 0, coinsBankedTotal: 0, distanceTotalM: 0, smashesTotal: 0, bestComboCount: 0 },
+    LEGACY_JUNK: 'remove me' });
+  assert.equal('LEGACY_JUNK' in out, false);
+  assert.equal(out.highScore, 3);
+});
+
 test('createStorage falls back to in-memory when localStorage is absent (Node)', () => {
   const s = createStorage();
   s.setItem('k', 'v');

@@ -28,21 +28,26 @@ const MIGRATIONS = {
 
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object') return defaults();
-  let v = Number(raw.version) || 1;          // missing/falsy version ⇒ legacy v1
+  let v = Math.floor(Number(raw.version) || 1); // missing/falsy/float version ⇒ floor to a valid step
   if (v > CURRENT_VERSION) return defaults(); // a save from a newer app; don't risk a bad downgrade
   let data = raw;
   while (v < CURRENT_VERSION) { data = MIGRATIONS[v](data); v += 1; }
   return fillDefaults(data);
 }
 
-// One-level deep-fill so the nested `stats` object is completed if a migrator
-// or stored blob missed a field. Top-level containers are filled shallowly.
+// Rebuild the object from known keys only (evicting any unknown/legacy top-level
+// fields) and deep-fill the nested `stats`. Uses ?? so legitimate 0/[]/{} are kept.
 function fillDefaults(data) {
   const d = defaults();
-  const out = { ...d, ...data };
-  out.stats = { ...d.stats, ...(data.stats || {}) };
-  out.version = CURRENT_VERSION;
-  return out;
+  return {
+    version: CURRENT_VERSION,
+    highScore: data.highScore ?? d.highScore,
+    coins: data.coins ?? d.coins,
+    unlocks: data.unlocks ?? d.unlocks,
+    upgrades: data.upgrades ?? d.upgrades,
+    missions: data.missions ?? d.missions,
+    stats: { ...d.stats, ...(data.stats || {}) },
+  };
 }
 
 export function load(adapter) {
