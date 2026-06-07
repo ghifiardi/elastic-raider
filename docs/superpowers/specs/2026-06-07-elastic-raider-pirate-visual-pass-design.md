@@ -1,7 +1,7 @@
 # Elastic Raider — Pirate Adventure Visual Pass Design Spec
 
 **Date:** 2026-06-07
-**Status:** Draft; awaiting design approval
+**Status:** Approved 2026-06-07 — ready for implementation planning
 **Builds on:** Phases 1, 2, 3a (merged to `main`)
 **Type:** Visual polish (no gameplay change)
 
@@ -16,7 +16,7 @@ Introduce `engine/sprites.js` — a set of **stateless draw helpers** (each take
 **Goals**
 - Make the game *look* like a pirate adventure, with a clear, characterful hero and enemies.
 - Keep the zero-dependency, no-build, procedural-art ethos (no image/sprite files).
-- Confine all changes to rendering; gameplay, collision, spawning, and persistence are byte-for-byte unaffected.
+- Confine all changes to rendering; no gameplay, collision, spawning, or persistence logic changes (behaviorally unaffected — the only `main.js` change is threading an animation clock to the renderer).
 - Keep `engine/render.js` focused by extracting drawing into `engine/sprites.js`.
 
 **Non-goals**
@@ -41,7 +41,7 @@ The visuals must read as a generic **pirate adventure**, never as a specific pro
 - **MODIFY `src/engine/render.js` — orchestrator.** Keeps the same public method names so `main.js`'s calls barely change, but delegates to `sprites.js` and threads the time arg:
   - `clear()` — unchanged.
   - `background(traveledPx, t)` — sky → clouds → islands → sea.
-  - `ground(entities)` — dock planks; still carves water gaps (now via `drawWaterGap`).
+  - `ground(entities, t)` — dock planks; still carves water gaps (animated via `drawWaterGap(ctx, x, w, t)`).
   - `entitiesLayer(entities, t)` — dispatch per `e.type` to the barrel/marine/coin/pickup helpers (skip `gap`).
   - `magnetRing(playerBox)` — unchanged.
   - `player(p, invincible, t)` — delegates to `drawHero`.
