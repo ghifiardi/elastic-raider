@@ -1,5 +1,5 @@
 import { VIEW, GROUND_Y, PLAYER, DASH_REACH, MAGNET_RADIUS } from '../data/constants.js';
-import { drawSky, drawClouds, drawIslands, drawSea, drawDock, drawWaterGap, drawBarrel, drawMarine, drawCoin } from './sprites.js';
+import { drawSky, drawClouds, drawIslands, drawSea, drawDock, drawWaterGap, drawBarrel, drawMarine, drawCoin, drawHero, drawPickup } from './sprites.js';
 
 const COLORS = {
   sky: '#0b1020', skyBand: '#16224a', ground: '#2b1d12', groundTop: '#5a3c22',
@@ -32,12 +32,8 @@ export function createRenderer(ctx) {
       if (e.type === 'coin') { drawCoin(ctx, e, t); continue; }
       if (e.type === 'marine') { drawMarine(ctx, e); continue; }
       if (e.type === 'crate') { drawBarrel(ctx, e); continue; }
-      if (PICKUP_COLOR[e.type]) {
-        const cx = e.x + e.w / 2, cy = e.y + e.h / 2, r = e.w / 2;
-        ctx.fillStyle = PICKUP_COLOR[e.type];
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy);
-        ctx.closePath(); ctx.fill();
+      if (e.type === 'gear' || e.type === 'magnet' || e.type === 'mult' || e.type === 'revive') {
+        drawPickup(ctx, e, t);
       }
     }
   }
@@ -52,19 +48,7 @@ export function createRenderer(ctx) {
   }
 
   function player(p, invincible = false, t = 0) {
-    if (invincible) {
-      ctx.save();
-      ctx.globalAlpha = 0.5; ctx.fillStyle = COLORS.glow;
-      ctx.fillRect(p.x - 6, p.y - p.height - 6, PLAYER.w + 12, p.height + 12);
-      ctx.restore();
-    }
-    ctx.fillStyle = p.state === 'dashing' ? COLORS.dash : COLORS.player;
-    ctx.fillRect(p.x, p.y - p.height, PLAYER.w, p.height);
-    if (p.state === 'dashing') {
-      ctx.globalAlpha = 0.4;
-      ctx.fillRect(p.x + PLAYER.w, p.y - p.height, DASH_REACH, p.height);
-      ctx.globalAlpha = 1;
-    }
+    drawHero(ctx, p, invincible, t);
   }
 
   function text(str, x, y, size = 24, align = 'left') {
