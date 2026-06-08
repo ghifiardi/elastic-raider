@@ -1,15 +1,8 @@
-import { VIEW, GROUND_Y, PLAYER, DASH_REACH, MAGNET_RADIUS } from '../data/constants.js';
+import { VIEW, MAGNET_RADIUS } from '../data/constants.js';
 import { drawSky, drawClouds, drawIslands, drawSea, drawDock, drawWaterGap, drawBarrel, drawMarine, drawCoin, drawHero, drawPickup } from './sprites.js';
 
-const COLORS = {
-  sky: '#0b1020', skyBand: '#16224a', ground: '#2b1d12', groundTop: '#5a3c22',
-  player: '#e8d7a0', dash: '#ffd34d', marine: '#3f6fb0', crate: '#8a5a2b',
-  gap: '#0b1020', coin: '#ffcf3f', text: '#f5efe0',
-  gear: '#ff7043', magnet: '#46c2ff', mult: '#b388ff', revive: '#ff5d8f',
-  glow: '#ffe07a', ring: '#46c2ff',
-};
-
-const PICKUP_COLOR = { gear: COLORS.gear, magnet: COLORS.magnet, mult: COLORS.mult, revive: COLORS.revive };
+// Only the chrome the orchestrator draws itself (sprite colors live in sprites.js PALETTE).
+const COLORS = { sky: '#0b1020', ring: '#46c2ff', text: '#f5efe0' };
 
 export function createRenderer(ctx) {
   function clear() { ctx.fillStyle = COLORS.sky; ctx.fillRect(0, 0, VIEW.W, VIEW.H); }
