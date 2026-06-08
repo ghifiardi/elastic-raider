@@ -24,8 +24,13 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = VIEW.W * dpr; canvas.height = VIEW.H * dpr;
+  canvas.width = VIEW.W * dpr;
+  canvas.height = VIEW.H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Fit the 16:9 playfield into the viewport without distortion (letterbox).
+  const fit = Math.min(window.innerWidth / VIEW.W, window.innerHeight / VIEW.H);
+  canvas.style.width = `${VIEW.W * fit}px`;
+  canvas.style.height = `${VIEW.H * fit}px`;
 }
 resize(); window.addEventListener('resize', resize);
 
