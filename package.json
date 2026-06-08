@@ -5,6 +5,13 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "serve": "node --version >/dev/null && python3 -m http.server 8080"
+    "serve": "node --version >/dev/null && python3 -m http.server 8080",
+    "assemble:web": "node scripts/assemble-web.mjs",
+    "sync": "node scripts/assemble-web.mjs && cap sync android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
   }
 }
