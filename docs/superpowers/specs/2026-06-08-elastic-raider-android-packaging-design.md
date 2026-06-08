@@ -1,7 +1,7 @@
 # Elastic Raider — Phase 4a Design Spec: Android Packaging (Web Readiness + Capacitor Config)
 
 **Date:** 2026-06-08
-**Status:** Draft; awaiting design approval
+**Status:** Approved 2026-06-08 — ready for implementation planning
 **Builds on:** Phases 1, 2, 3a + the visual pass (all merged to `main`)
 **Type:** Mobile packaging — Part A (web readiness) + Part B config/runbook
 
