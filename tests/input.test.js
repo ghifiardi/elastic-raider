@@ -47,3 +47,47 @@ test('takeIntents drains: second call returns all-false', () => {
   tr.takeIntents();
   assert.deepEqual(tr.takeIntents(), NONE);
 });
+
+test('down-swipe fires slide mid-gesture, never jumps', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.move(1, 102, 140);              // 40px down: crosses SWIPE_DIST
+  assert.deepEqual(tr.takeIntents(), { ...NONE, slidePressed: true });
+  tr.tick(200);                      // consumed: commit window can't fire
+  tr.up(1);                          // nor can release
+  assert.deepEqual(tr.takeIntents(), NONE);
+  assert.equal(tr.jumpHeld, false);
+});
+
+test('forward-swipe fires dash; up-swipe fires jump and holds', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.move(1, 145, 102);              // 45px right
+  assert.deepEqual(tr.takeIntents(), { ...NONE, dashPressed: true });
+  tr.up(1);
+
+  tr.down(2, 100, 100, 0);
+  tr.move(2, 98, 60);                // 40px up
+  assert.deepEqual(tr.takeIntents(), { ...NONE, jumpPressed: true });
+  assert.equal(tr.jumpHeld, true);   // up-swipe holds until release
+  tr.up(2);
+  assert.equal(tr.jumpHeld, false);
+});
+
+test('left-swipe is inert and consumes the touch', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.move(1, 55, 102);               // 45px left
+  assert.deepEqual(tr.takeIntents(), NONE);
+  tr.tick(200);                      // consumed: no late jump commit
+  tr.up(1);                          // and no tap on release
+  assert.deepEqual(tr.takeIntents(), NONE);
+});
+
+test('a touch fires at most one swipe', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.move(1, 145, 100);              // dash fires
+  tr.move(1, 145, 200);              // further movement: nothing new
+  assert.deepEqual(tr.takeIntents(), { ...NONE, dashPressed: true });
+});

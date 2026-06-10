@@ -10,10 +10,20 @@ export function createGestureTracker() {
 
   return {
     down(id, x, y, t) {
+      heldJumpIds.delete(id);
       touches.set(id, { x0: x, y0: y, t0: t, consumed: false, committed: false });
     },
     move(id, x, y) {
-      // Swipe recognition lands in Task 2.
+      const tr = touches.get(id);
+      if (!tr || tr.consumed) return;
+      const dx = x - tr.x0, dy = y - tr.y0;
+      if (Math.hypot(dx, dy) < SWIPE_DIST) return;
+      tr.consumed = true;
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        if (dy < 0) { pending.jumpPressed = true; heldJumpIds.add(id); } // up
+        else { pending.slidePressed = true; heldJumpIds.delete(id); }    // down
+      } else if (dx > 0) { pending.dashPressed = true; heldJumpIds.delete(id); } // forward
+      // leftward ('back') is consumed but inert
     },
     tick(t) {
       for (const [id, tr] of touches) {
