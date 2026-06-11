@@ -27,11 +27,12 @@ New pure factory `createGestureTracker()` in `src/engine/input.js` with injected
   - `back` → no action (consumed, inert)
   Mark the touch consumed; a touch fires at most one swipe.
 - `tick(t)` — called once per frame from `consume()`. Any unconsumed touch older than `COMMIT_MS` (90ms) **commits as a held jump**: `jumpPressed` + add `id` to `heldJumpIds`. Mark committed.
-- `up(id, t)` — if the touch was never consumed and never committed, it is a **fast tap**: `jumpPressed` on release, no hold (short hop — matches a fast keyboard tap). Always: remove `id` from `heldJumpIds`, drop the tracker.
+- `up(id)` — if the touch was never consumed and never committed, it is a **fast tap**: `jumpPressed` on release, no hold (short hop — matches a fast keyboard tap). Always: remove `id` from `heldJumpIds`, drop the tracker. (Release time is unused.)
 - `cancel(id)` — drop the tracker and remove `id` from `heldJumpIds` (Android fires `touchcancel` when the system claims the gesture).
+- `reset()` — drop all touches, holds, and pending intents. The wiring calls this on `blur` / `visibilitychange`-hidden so a touch whose `touchend` was swallowed by backgrounding can't phantom-jump (and start a run) on resume; it also clears the keyboard hold.
 - `jumpHeld` is **derived**: `heldJumpIds.size > 0`. Never a directly-toggled boolean.
 
-A committed (already-jumped) touch that later crosses `SWIPE_DIST` still fires its swipe action and removes its own id from `heldJumpIds` (e.g. press-then-swipe-down: the jump already happened; slide fires and the jump's hold ends; `player.js` ignores slide while airborne — acceptable).
+A committed (already-jumped) touch that later crosses `SWIPE_DIST` still fires its swipe action and removes its own id from `heldJumpIds` (e.g. press-then-swipe-down: the jump already happened; slide fires and the jump's hold ends; `player.js` ignores slide while airborne — acceptable). Exception: a committed touch's **up**-swipe keeps the hold but does **not** re-fire `jumpPressed` — the jump already pulsed at commit, and a second pulse would play a phantom jump sound.
 
 #### Timing summary
 
