@@ -20,7 +20,7 @@ export function createGestureTracker() {
       if (Math.hypot(dx, dy) < SWIPE_DIST) return;
       tr.consumed = true;
       if (Math.abs(dy) >= Math.abs(dx)) {
-        if (dy < 0) { pending.jumpPressed = true; heldJumpIds.add(id); } // up
+        if (dy < 0) { if (!tr.committed) pending.jumpPressed = true; heldJumpIds.add(id); } // up
         else { pending.slidePressed = true; heldJumpIds.delete(id); }    // down
       } else if (dx > 0) { pending.dashPressed = true; heldJumpIds.delete(id); } // forward
       // leftward ('back') is consumed but inert

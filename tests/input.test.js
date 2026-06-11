@@ -91,3 +91,60 @@ test('a touch fires at most one swipe', () => {
   tr.move(1, 145, 200);              // further movement: nothing new
   assert.deepEqual(tr.takeIntents(), { ...NONE, dashPressed: true });
 });
+
+test('two fingers: B swiping down does not end A held jump', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);           // finger A
+  tr.tick(90);                       // A commits + holds
+  tr.takeIntents();
+  tr.down(2, 300, 100, 100);         // finger B
+  tr.move(2, 300, 140);              // B swipes down
+  assert.deepEqual(tr.takeIntents(), { ...NONE, slidePressed: true });
+  assert.equal(tr.jumpHeld, true);   // A still holding
+  tr.up(2);
+  assert.equal(tr.jumpHeld, true);
+  tr.up(1);
+  assert.equal(tr.jumpHeld, false);
+});
+
+test('committed press then down-swipe: slide fires and hold ends', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.tick(90);                       // jump committed + held
+  tr.takeIntents();
+  tr.move(1, 100, 140);              // now swipe down
+  assert.deepEqual(tr.takeIntents(), { ...NONE, slidePressed: true });
+  assert.equal(tr.jumpHeld, false);  // only its own hold cleared
+});
+
+test('cancel discards the touch: no tap, no hold', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.tick(90);
+  tr.takeIntents();
+  assert.equal(tr.jumpHeld, true);
+  tr.cancel(1);
+  assert.equal(tr.jumpHeld, false);
+  tr.up(1);                          // stale up after cancel: harmless
+  assert.deepEqual(tr.takeIntents(), NONE);
+});
+
+test('committed press then up-swipe: no second jump pulse, hold persists', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.tick(90);                       // jump committed + held
+  tr.takeIntents();
+  tr.move(1, 100, 60);               // drag up 40px
+  assert.deepEqual(tr.takeIntents(), NONE);  // no phantom second jump
+  assert.equal(tr.jumpHeld, true);           // hold persists until release
+});
+
+test('id reuse after a lost up: stale hold does not leak', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.tick(90);                       // committed + held
+  tr.takeIntents();
+  // up(1) is lost (e.g., app backgrounded mid-touch); browser reuses id 1
+  tr.down(1, 200, 200, 1000);
+  assert.equal(tr.jumpHeld, false);  // stale hold cleared by down()
+});
