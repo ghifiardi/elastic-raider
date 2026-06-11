@@ -36,7 +36,8 @@ resize(); window.addEventListener('resize', resize);
 
 const storage = createStorage();
 const renderer = createRenderer(ctx);
-const screens = createScreens(renderer);
+const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const screens = createScreens(renderer, IS_TOUCH);
 const audio = createAudio();
 const input = createInput(window);
 

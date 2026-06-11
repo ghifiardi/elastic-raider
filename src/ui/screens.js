@@ -1,10 +1,14 @@
 import { VIEW } from '../data/constants.js';
 
-export function createScreens(renderer) {
+export function createScreens(renderer, isTouch = false) {
+  const controlsHint = isTouch
+    ? 'tap jump · swipe ↓ slide · swipe → dash-smash'
+    : '↑/Space jump · ↓ slide · X/→ dash-smash';
+
   function menu(walletCoins = 0) {
     renderer.text('ELASTIC RAIDER', VIEW.W / 2, VIEW.H / 2 - 40, 48, 'center');
     renderer.text('Tap / Space to start', VIEW.W / 2, VIEW.H / 2 + 10, 22, 'center');
-    renderer.text('↑/Space jump · ↓ slide · X/→ dash-smash', VIEW.W / 2, VIEW.H / 2 + 44, 18, 'center');
+    renderer.text(controlsHint, VIEW.W / 2, VIEW.H / 2 + 44, 18, 'center');
     renderer.text(`Coins: ${walletCoins}`, VIEW.W / 2, VIEW.H / 2 + 78, 18, 'center');
   }
 
