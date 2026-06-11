@@ -20,6 +20,7 @@ import { createStorage } from './meta/storage.js';
 import { load, save, updateHighScore } from './meta/save.js';
 import { makeRunSummary, bankRun } from './meta/economy.js';
 import { effectsOf } from './meta/shop.js';
+import { createOverlay } from './ui/overlay.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -47,6 +48,19 @@ const input = createInput(window);
 
 const game = createGame();
 const saveData = load(storage);        // full v2 save object, persisted across runs in memory
+
+const shopButton = document.createElement('button');
+shopButton.id = 'shop-open';
+shopButton.textContent = '\u{1F6D2} SHOP';
+playfield.appendChild(shopButton);
+const overlay = createOverlay({
+  root: document.getElementById('overlay'),
+  openButton: shopButton,
+  saveData,
+  persist: () => save(storage, saveData),
+  input,
+});
+
 let run = null;
 let runCounter = 0;
 let lastResult = { score: 0, isNewBest: false, banked: 0, wallet: saveData.coins };
@@ -108,6 +122,8 @@ function overGap(p, entities) {
 function update(dt) {
   clock += dt;
   const actions = input.consume();
+  overlay.setButtonVisible(game.mode === MODES.MENU || game.mode === MODES.GAMEOVER);
+  if (overlay.isOpen()) return;        // snapshot already consumed and discarded
 
   if (game.mode === MODES.MENU || game.mode === MODES.GAMEOVER) {
     if (actions.jumpPressed) beginPlaying();
