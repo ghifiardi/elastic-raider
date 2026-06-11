@@ -10,7 +10,13 @@ import {
 } from '../src/data/constants.js';
 
 test('fresh state is all zero', () => {
-  assert.deepEqual(createPowerups(), { gear: 0, magnet: 0, multiplier: 0, mercy: 0, revives: 0 });
+  const s = createPowerups();
+  // config is now part of the object; check the numeric fields individually
+  assert.equal(s.gear, 0);
+  assert.equal(s.magnet, 0);
+  assert.equal(s.multiplier, 0);
+  assert.equal(s.mercy, 0);
+  assert.equal(s.revives, 0);
 });
 
 test('activate sets each timer / increments revives', () => {
@@ -89,4 +95,22 @@ test('magnetPull moves an in-radius coin toward the player; ignores others', () 
   assert.ok(near.x < nearBefore);
   assert.equal(far.x, farBefore);
   assert.equal(crate.x, crateBefore);
+});
+
+test('createPowerups stores effect-adjusted durations and starting revives', () => {
+  const s = createPowerups({ magnetDurationBonus: 3, gearDurationBonus: 2.4, startingRevives: 2 });
+  assert.equal(s.revives, 2);
+  activate(s, 'magnet');
+  assert.equal(s.magnet, 9);     // MAGNET_DURATION 6 + 3
+  activate(s, 'gear');
+  assert.equal(s.gear, 7.4);     // GEAR_DURATION 5 + 2.4
+});
+
+test('createPowerups without effects matches current behavior', () => {
+  const s = createPowerups();
+  assert.equal(s.revives, 0);
+  activate(s, 'magnet');
+  assert.equal(s.magnet, 6);
+  activate(s, 'gear');
+  assert.equal(s.gear, 5);
 });
