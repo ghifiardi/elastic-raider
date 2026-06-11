@@ -174,7 +174,7 @@ function update(dt) {
         const pts = addCoin(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups), run.effects.coinValueMultiplier);
         const c = entityCenter(e);
         fx.coinBurst(c.x, c.y);
-        fx.popup(c.x, c.y - 18, `+${pts}`, '#ffcf3f');
+        fx.popup(c.x, c.y - 18, `+${Math.round(pts)}`, '#ffcf3f');
         audio.coin();
       }
       continue;
@@ -198,7 +198,7 @@ function update(dt) {
       const pts = addSmash(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups));
       const c = entityCenter(e);
       fx.smashBurst(c.x, c.y);
-      fx.popup(c.x, c.y - 24, `+${pts}`, '#ff7a33');
+      fx.popup(c.x, c.y - 24, `+${Math.round(pts)}`, '#ff7a33');
       if (multiplier(run.combo) > tierBefore) fx.comboFlash('#b388ff');  // tier crossing only
       audio.smash();
       continue;
