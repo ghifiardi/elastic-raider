@@ -16,10 +16,58 @@ export const PALETTE = {
   glow: '#ffe07a', ring: '#46c2ff', text: '#f5efe0',
 };
 
-export function drawSky(ctx) {
+// --- Day→night cycle -------------------------------------------------------
+// Keyframes: 0 = day (the exact PALETTE values), 0.25 = dusk, 0.5 = night,
+// 0.75 = dawn, wrapping back to day at 1. Only background colors participate:
+// entity sprites, gap foam, and HUD colors are NEVER phase-tinted (readability).
+const DAY = {
+  skyTop: PALETTE.skyTop, skyBottom: PALETTE.skyBottom, cloud: PALETTE.cloud,
+  island: PALETTE.island, seaFar: PALETTE.seaFar, foam: PALETTE.foam, starAlpha: 0,
+};
+const DUSK = {
+  skyTop: '#3a2a4d', skyBottom: '#b06a4a', cloud: '#e8c8b0',
+  island: '#1d3a2e', seaFar: '#2a5a80', foam: '#d8c8b0', starAlpha: 0.25,
+};
+const NIGHT = {
+  skyTop: '#070b18', skyBottom: '#16243d', cloud: '#5a6a85',
+  island: '#15291f', seaFar: '#10395c', foam: '#9fc8e8', starAlpha: 1,
+};
+const KEYFRAMES = [DAY, DUSK, NIGHT, DUSK]; // day→dusk→night→dawn(=dusk)→day
+
+export function lerpColor(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = (sh) => Math.round(((pa >> sh) & 255) + (((pb >> sh) & 255) - ((pa >> sh) & 255)) * t);
+  return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
+}
+
+// Blend the keyframe ring at phase 0..1.
+export function paletteAt(phase) {
+  const seg = (((phase % 1) + 1) % 1) * KEYFRAMES.length;
+  const i = Math.floor(seg) % KEYFRAMES.length;
+  const j = (i + 1) % KEYFRAMES.length;
+  const t = seg - Math.floor(seg);
+  const a = KEYFRAMES[i], b = KEYFRAMES[j];
+  const out = { starAlpha: a.starAlpha + (b.starAlpha - a.starAlpha) * t };
+  for (const k of ['skyTop', 'skyBottom', 'cloud', 'island', 'seaFar', 'foam']) {
+    out[k] = lerpColor(a[k], b[k], t);
+  }
+  return out;
+}
+
+export function drawSky(ctx, phase = 0) {
+  const pal = paletteAt(phase);
   const g = ctx.createLinearGradient(0, 0, 0, VIEW.H);
-  g.addColorStop(0, PALETTE.skyTop); g.addColorStop(1, PALETTE.skyBottom);
+  g.addColorStop(0, pal.skyTop); g.addColorStop(1, pal.skyBottom);
   ctx.fillStyle = g; ctx.fillRect(0, 0, VIEW.W, VIEW.H);
+  if (pal.starAlpha > 0.01) {
+    ctx.save(); ctx.globalAlpha = pal.starAlpha; ctx.fillStyle = '#e8ecf8';
+    // Fixed star field (deterministic positions; no rng — same sky every night)
+    for (const [sx, sy, r] of [[60, 40, 1.5], [180, 90, 1], [320, 30, 2], [470, 70, 1],
+      [610, 45, 1.5], [760, 95, 1], [880, 25, 2], [930, 120, 1], [240, 140, 1], [700, 150, 1.5]]) {
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
 }
 
 function cloudPuff(ctx, x, y) {
@@ -30,10 +78,10 @@ function cloudPuff(ctx, x, y) {
   ctx.fill();
 }
 
-export function drawClouds(ctx, traveledPx, t) {
+export function drawClouds(ctx, traveledPx, t, phase = 0) {
   const span = VIEW.W + 200;
   const off = (traveledPx * 0.05 + t * 8) % span;
-  ctx.fillStyle = PALETTE.cloud; ctx.globalAlpha = 0.85;
+  ctx.fillStyle = paletteAt(phase).cloud; ctx.globalAlpha = 0.85;
   for (const [bx, by] of [[120, 90], [430, 60], [720, 110], [950, 75]]) {
     const x = ((bx - off) % span + span) % span - 100;
     cloudPuff(ctx, x, by);
@@ -41,9 +89,9 @@ export function drawClouds(ctx, traveledPx, t) {
   ctx.globalAlpha = 1;
 }
 
-export function drawIslands(ctx, traveledPx) {
+export function drawIslands(ctx, traveledPx, phase = 0) {
   const off = (traveledPx * 0.15) % 380;
-  ctx.fillStyle = PALETTE.island;
+  ctx.fillStyle = paletteAt(phase).island;
   for (let i = -1; i < 4; i++) {
     const cx = i * 380 - off + 120;
     ctx.beginPath();
@@ -53,11 +101,12 @@ export function drawIslands(ctx, traveledPx) {
   }
 }
 
-export function drawSea(ctx, traveledPx, t) {
+export function drawSea(ctx, traveledPx, t, phase = 0) {
   const top = 300, bottom = 360;
-  ctx.fillStyle = PALETTE.seaFar;
+  const pal = paletteAt(phase);
+  ctx.fillStyle = pal.seaFar;
   ctx.fillRect(0, top, VIEW.W, bottom - top);
-  ctx.strokeStyle = PALETTE.foam; ctx.globalAlpha = 0.4; ctx.lineWidth = 2;
+  ctx.strokeStyle = pal.foam; ctx.globalAlpha = 0.4; ctx.lineWidth = 2;
   ctx.beginPath();
   const off = (traveledPx * 0.3 + t * 20) % 40;
   for (let x = -40 + off; x < VIEW.W; x += 40) {
