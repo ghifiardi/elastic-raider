@@ -23,6 +23,7 @@ import { effectsOf } from './meta/shop.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+const playfield = document.getElementById('playfield');
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = VIEW.W * dpr;
@@ -32,6 +33,8 @@ function resize() {
   const fit = Math.min(window.innerWidth / VIEW.W, window.innerHeight / VIEW.H);
   canvas.style.width = `${VIEW.W * fit}px`;
   canvas.style.height = `${VIEW.H * fit}px`;
+  playfield.style.width = canvas.style.width;
+  playfield.style.height = canvas.style.height;
 }
 resize(); window.addEventListener('resize', resize);
 
