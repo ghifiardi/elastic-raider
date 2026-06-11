@@ -140,6 +140,15 @@ test('v1 -> v3 chain still works', () => {
   assert.equal(m.upgrades.coinValue, 0);
 });
 
+test('fillDefaults sanitizes coins and highScore to non-negative integers', () => {
+  const m = migrate({ version: 3, highScore: '<img>', coins: -7, unlocks: [], upgrades: {}, missions: {}, stats: {} });
+  assert.equal(m.coins, 0);
+  assert.equal(m.highScore, 0);
+  const ok = migrate({ version: 3, highScore: 563.9, coins: '41', unlocks: [], upgrades: {}, missions: {}, stats: {} });
+  assert.equal(ok.coins, 41);
+  assert.equal(ok.highScore, 563);
+});
+
 test('tier sanitization: junk localStorage cannot break shop state', () => {
   const m = migrate({
     version: 3, highScore: 1, coins: 10, unlocks: [], missions: {}, stats: {},

@@ -9,6 +9,12 @@ function upgradeDefaults() {
   return out;
 }
 
+// Non-negative integer or 0 — for currency/score fields read from storage.
+function sanitizeCount(v) {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 // Known keys only; integer, finite, clamped 0..maxTier. Junk (strings, NaN,
 // negatives, floats, absurd numbers) becomes a safe clamped value or 0.
 function sanitizeTiers(raw) {
@@ -61,8 +67,8 @@ function fillDefaults(data) {
   const d = defaults();
   return {
     version: CURRENT_VERSION,
-    highScore: data.highScore ?? d.highScore,
-    coins: data.coins ?? d.coins,
+    highScore: sanitizeCount(data.highScore ?? d.highScore),
+    coins: sanitizeCount(data.coins ?? d.coins),
     unlocks: data.unlocks ?? d.unlocks,
     upgrades: sanitizeTiers(data.upgrades),
     missions: data.missions ?? d.missions,
