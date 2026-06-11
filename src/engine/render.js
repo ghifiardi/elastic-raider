@@ -7,11 +7,48 @@ const COLORS = { sky: '#0b1020', ring: '#46c2ff', text: '#f5efe0' };
 export function createRenderer(ctx) {
   function clear() { ctx.fillStyle = COLORS.sky; ctx.fillRect(0, 0, VIEW.W, VIEW.H); }
 
-  function background(traveledPx, t = 0) {
-    drawSky(ctx);
-    drawClouds(ctx, traveledPx, t);
-    drawIslands(ctx, traveledPx);
-    drawSea(ctx, traveledPx, t);
+  function background(traveledPx, t = 0, phase = 0) {
+    drawSky(ctx, phase);
+    drawClouds(ctx, traveledPx, t, phase);
+    drawIslands(ctx, traveledPx, phase);
+    drawSea(ctx, traveledPx, t, phase);
+  }
+
+  // Amendment 4: world-aligned drawing happens between beginShake/endShake;
+  // flashLayer and text/HUD are drawn OUTSIDE so they never shake.
+  function beginShake(offset) { ctx.save(); ctx.translate(offset.x, offset.y); }
+  function endShake() { ctx.restore(); }
+
+  // World-aligned FX: particles + popups (screen coords, drawn inside the shaken pass).
+  function fxLayer(fxState) {
+    for (const p of fxState.particles) {
+      const fade = 1 - p.life / p.ttl;
+      ctx.save(); ctx.globalAlpha = Math.max(0, fade);
+      if (p.shape === 'square') {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      } else {
+        ctx.strokeStyle = p.color; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    for (const p of fxState.popups) {
+      const fade = 1 - p.life / p.ttl;
+      ctx.save(); ctx.globalAlpha = Math.max(0, fade);
+      ctx.fillStyle = p.color; ctx.font = 'bold 20px system-ui, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+    }
+  }
+
+  // Full-screen combo flash — UNSHAKEN, drawn before HUD. Alpha capped low.
+  function flashLayer(flash) {
+    if (!flash) return;
+    const fade = 1 - flash.life / flash.ttl;
+    ctx.save(); ctx.globalAlpha = 0.18 * fade; ctx.fillStyle = flash.color;
+    ctx.fillRect(0, 0, VIEW.W, VIEW.H);
+    ctx.restore();
   }
 
   function ground(entities, t = 0) {
@@ -49,5 +86,5 @@ export function createRenderer(ctx) {
     ctx.fillText(str, x, y);
   }
 
-  return { clear, background, ground, entitiesLayer, magnetRing, player, text };
+  return { clear, background, ground, entitiesLayer, magnetRing, player, text, beginShake, endShake, fxLayer, flashLayer };
 }
