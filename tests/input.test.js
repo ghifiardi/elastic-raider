@@ -202,3 +202,17 @@ test('createInput: blur clears held keys and in-flight touches', () => {
   assert.equal(a.jumpHeld, false);   // keyboard hold cleared by blur
   assert.equal(a.jumpPressed, false); // stale touchend fires no tap
 });
+
+test('createInput: clear() drops pending presses, holds, and in-flight touches', () => {
+  const target = new EventTarget();
+  const input = createInput(target);
+  const kd = new Event('keydown'); kd.code = 'Space';
+  target.dispatchEvent(kd);                                   // pending press + hold
+  target.dispatchEvent(touchEvent('touchstart', 9, 50, 50));  // in-flight touch
+  input.clear();
+  const a = input.consume();
+  assert.equal(a.jumpPressed, false);                         // one-shot dropped
+  assert.equal(a.jumpHeld, false);                            // hold dropped
+  target.dispatchEvent(touchEvent('touchend', 9, 50, 50));    // stale end after clear
+  assert.equal(input.consume().jumpPressed, false);           // fires nothing
+});
