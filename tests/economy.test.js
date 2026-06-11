@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { walletBalance, canAfford, spend, earn, makeRunSummary, bankRun } from '../src/meta/economy.js';
 import { defaults } from '../src/meta/save.js';
+import { createScore, addCoin } from '../src/game/scoring.js';
 
 test('earn / walletBalance', () => {
   const s = defaults();
@@ -46,4 +47,13 @@ test('bankRun banks raw coins, accumulates stats, returns banked amount', () => 
   assert.equal(s.coins, 20);
   assert.equal(s.stats.runs, 2);
   assert.equal(s.stats.bestComboCount, 5); // max(5, 3)
+});
+
+test('Gold Rush never inflates the wallet: bankRun banks raw coin count', () => {
+  const score = createScore();
+  addCoin(score, 1, 1.75); addCoin(score, 1, 1.75);   // 2 pickups with Gold Rush
+  const saveData = { coins: 0, stats: { runs: 0, coinsBankedTotal: 0, distanceTotalM: 0, smashesTotal: 0, bestComboCount: 0 } };
+  const banked = bankRun(saveData, makeRunSummary(score, 0));
+  assert.equal(banked, 2);            // raw count, not score-multiplied
+  assert.equal(saveData.coins, 2);
 });
