@@ -44,6 +44,11 @@ export function createGestureTracker() {
       heldJumpIds.delete(id);
       touches.delete(id);
     },
+    reset() {
+      touches.clear();
+      heldJumpIds.clear();
+      pending = { jumpPressed: false, slidePressed: false, dashPressed: false };
+    },
     get jumpHeld() {
       return heldJumpIds.size > 0;
     },
@@ -77,6 +82,14 @@ export function createInput(target = window) {
   target.addEventListener('touchmove', forward((t) => tracker.move(t.identifier, t.clientX, t.clientY)), { passive: true });
   target.addEventListener('touchend', forward((t) => tracker.up(t.identifier)), { passive: true });
   target.addEventListener('touchcancel', forward((t) => tracker.cancel(t.identifier)), { passive: true });
+
+  // Backgrounding can swallow touchend/keyup; drop transient state so a stale
+  // touch can't phantom-jump (and start a run) on resume.
+  const clearTransient = () => { tracker.reset(); keys.jumpHeld = false; };
+  target.addEventListener('blur', clearTransient);
+  target.addEventListener('visibilitychange', () => {
+    if (typeof document !== 'undefined' && document.hidden) clearTransient();
+  });
 
   return {
     consume() {

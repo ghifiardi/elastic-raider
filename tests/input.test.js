@@ -177,3 +177,28 @@ test('createInput: keyboard space sets jumpPressed and jumpHeld', () => {
   target.dispatchEvent(ku);
   assert.equal(input.consume().jumpHeld, false);
 });
+
+test('reset clears touches, holds, and pending intents', () => {
+  const tr = createGestureTracker();
+  tr.down(1, 100, 100, 0);
+  tr.tick(90);                       // committed + held, jumpPressed pending
+  tr.reset();
+  assert.equal(tr.jumpHeld, false);
+  assert.deepEqual(tr.takeIntents(), NONE);
+  tr.up(1);                          // stale up after reset: harmless
+  assert.deepEqual(tr.takeIntents(), NONE);
+});
+
+test('createInput: blur clears held keys and in-flight touches', () => {
+  const target = new EventTarget();
+  const input = createInput(target);
+  const kd = new Event('keydown'); kd.code = 'Space';
+  target.dispatchEvent(kd);
+  input.consume();                                   // drain the press; Space still held
+  target.dispatchEvent(touchEvent('touchstart', 1, 100, 100));
+  target.dispatchEvent(new Event('blur'));
+  target.dispatchEvent(touchEvent('touchend', 1, 100, 100)); // stale end after blur
+  const a = input.consume();
+  assert.equal(a.jumpHeld, false);   // keyboard hold cleared by blur
+  assert.equal(a.jumpPressed, false); // stale touchend fires no tap
+});
