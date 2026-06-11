@@ -91,7 +91,7 @@ Migration 2→3: copy everything, deep-fill `upgrades` with the named tier keys 
 
 **Panel:** dark theme matching the game (#0b1020 bg, system-ui), title "SHOP", a wallet readout, and one row per upgrade: name, effect line ("Magnet lasts +1.5s per tier"), tier pips (●●○), and a cost button. Button disabled (greyed, not hidden) when unaffordable or maxed — with the reason shown. Close via ✕. Plain DOM, `<style>` block in index.html, zero dependencies.
 
-**Entry points:** menu and game-over screens show a "🛒 SHOP" hint; a small DOM button (part of the overlay layer, always visible in MENU/GAMEOVER modes, hidden while PLAYING) opens it. Game canvas text remains non-interactive.
+**Entry points:** a small DOM "🛒 SHOP" button (part of the overlay layer, visible in MENU/GAMEOVER modes, hidden while PLAYING) opens the shop — the button itself IS the menu/game-over hint; `src/ui/screens.js` stays untouched. Game canvas text remains non-interactive.
 
 **Input hygiene (hard requirements):**
 1. **Event propagation stops at the overlay.** `createInput(window)` listens at the window level, so overlay interactions WILL reach the game input layer unless blocked. `overlay.js` must call `stopPropagation()` on its panel's `pointerdown/pointerup/touchstart/touchend/touchmove/click/keydown/keyup` events (capture them at the panel root). The open and close buttons specifically must not let the same event that triggered them reach the game tracker — the close-tap must never become a game tap.

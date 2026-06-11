@@ -47,7 +47,7 @@ const audio = createAudio();
 const input = createInput(window);
 
 const game = createGame();
-const saveData = load(storage);        // full v2 save object, persisted across runs in memory
+const saveData = load(storage);        // full v3 save object, persisted across runs in memory
 
 const shopButton = document.createElement('button');
 shopButton.id = 'shop-open';
