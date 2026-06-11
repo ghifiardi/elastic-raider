@@ -1,5 +1,30 @@
+import { UPGRADES } from './shop.js';
+
 const KEY = 'elastic-raider:save';
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
+
+function upgradeDefaults() {
+  const out = {};
+  for (const id of Object.keys(UPGRADES)) out[id] = 0;
+  return out;
+}
+
+// Non-negative integer or 0 — for currency/score fields read from storage.
+function sanitizeCount(v) {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+// Known keys only; integer, finite, clamped 0..maxTier. Junk (strings, NaN,
+// negatives, floats, absurd numbers) becomes a safe clamped value or 0.
+function sanitizeTiers(raw) {
+  const out = {};
+  for (const id of Object.keys(UPGRADES)) {
+    const n = Math.floor(Number(raw?.[id]));
+    out[id] = Number.isFinite(n) && n > 0 ? Math.min(n, UPGRADES[id].costs.length) : 0;
+  }
+  return out;
+}
 
 export function defaults() {
   return {
@@ -7,7 +32,7 @@ export function defaults() {
     highScore: 0,
     coins: 0,
     unlocks: [],
-    upgrades: {},
+    upgrades: upgradeDefaults(),
     missions: {},
     stats: { runs: 0, coinsBankedTotal: 0, distanceTotalM: 0, smashesTotal: 0, bestComboCount: 0 },
   };
@@ -24,6 +49,7 @@ const MIGRATIONS = {
     missions: {},
     stats: { runs: 0, coinsBankedTotal: 0, distanceTotalM: 0, smashesTotal: 0, bestComboCount: 0 },
   }),
+  2: (s) => ({ ...s, version: 3 }),
 };
 
 export function migrate(raw) {
@@ -41,10 +67,10 @@ function fillDefaults(data) {
   const d = defaults();
   return {
     version: CURRENT_VERSION,
-    highScore: data.highScore ?? d.highScore,
-    coins: data.coins ?? d.coins,
+    highScore: sanitizeCount(data.highScore ?? d.highScore),
+    coins: sanitizeCount(data.coins ?? d.coins),
     unlocks: data.unlocks ?? d.unlocks,
-    upgrades: data.upgrades ?? d.upgrades,
+    upgrades: sanitizeTiers(data.upgrades),
     missions: data.missions ?? d.missions,
     stats: { ...d.stats, ...(data.stats || {}) },
   };

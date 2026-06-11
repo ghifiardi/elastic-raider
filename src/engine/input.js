@@ -83,15 +83,20 @@ export function createInput(target = window) {
   target.addEventListener('touchend', forward((t) => tracker.up(t.identifier)), { passive: true });
   target.addEventListener('touchcancel', forward((t) => tracker.cancel(t.identifier)), { passive: true });
 
-  // Backgrounding can swallow touchend/keyup; drop transient state so a stale
-  // touch can't phantom-jump (and start a run) on resume.
-  const clearTransient = () => { tracker.reset(); keys.jumpHeld = false; };
+  // Full transient reset: tracker state AND keyboard one-shots/hold. Used by the
+  // blur/hidden handlers and exposed as clear() for UI overlays.
+  const clearTransient = () => {
+    tracker.reset();
+    keys.jumpPressed = false; keys.slidePressed = false; keys.dashPressed = false;
+    keys.jumpHeld = false;
+  };
   target.addEventListener('blur', clearTransient);
   target.addEventListener('visibilitychange', () => {
     if (typeof document !== 'undefined' && document.hidden) clearTransient();
   });
 
   return {
+    clear: clearTransient,
     consume() {
       tracker.tick(now());
       const ti = tracker.takeIntents();

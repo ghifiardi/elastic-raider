@@ -9,10 +9,49 @@
       touch-action: none; font-family: system-ui, sans-serif; }
     body { display: flex; align-items: center; justify-content: center; }
     #game { display: block; }
+    #playfield { position: relative; }
+    #overlay {
+      position: absolute; inset: 0; z-index: 10;
+      background: rgba(11, 16, 32, 0.92);
+      color: #e8ecf8; overflow-y: auto;
+      font-family: system-ui, sans-serif;
+    }
+    #overlay .panel { max-width: 640px; margin: 0 auto; padding: 20px 16px; }
+    #overlay h2 { margin: 0 0 4px; font-size: 26px; letter-spacing: 2px; }
+    #overlay .wallet { color: #ffcf3f; margin-bottom: 14px; font-size: 16px; }
+    #overlay .row {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,0.06); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 10px;
+    }
+    #overlay .row .info { flex: 1; min-width: 0; }
+    #overlay .row .name { font-weight: 700; font-size: 16px; }
+    #overlay .row .effect { font-size: 13px; opacity: 0.75; }
+    #overlay .row .pips { font-size: 12px; letter-spacing: 2px; color: #7CFC9B; }
+    #overlay button.buy {
+      min-width: 96px; min-height: 44px; border: 0; border-radius: 8px;
+      background: #ffcf3f; color: #0b1020; font-weight: 700; font-size: 15px;
+    }
+    #overlay button.buy:disabled { background: #3a4060; color: #9aa3c0; }
+    #overlay .close {
+      position: absolute; top: 10px; right: 12px; min-width: 44px; min-height: 44px;
+      border: 0; border-radius: 8px; background: rgba(255,255,255,0.12);
+      color: #e8ecf8; font-size: 18px;
+    }
+    #shop-open {
+      position: absolute; top: 10px; right: 12px; z-index: 5;
+      min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px;
+      background: rgba(255, 207, 63, 0.92); color: #0b1020;
+      font: 700 15px system-ui, sans-serif;
+    }
+    #shop-open[hidden] { display: none; }
   </style>
 </head>
 <body>
-  <canvas id="game"></canvas>
+  <div id="playfield">
+    <canvas id="game"></canvas>
+    <div id="overlay" hidden></div>
+  </div>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

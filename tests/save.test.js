@@ -9,20 +9,22 @@ function fakeAdapter(initial) {
   return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, v) };
 }
 
-test('defaults is the full v2 shape', () => {
+test('defaults is the full v3 shape', () => {
   assert.deepEqual(defaults(), {
-    version: 2, highScore: 0, coins: 0, unlocks: [], upgrades: {}, missions: {},
+    version: 3, highScore: 0, coins: 0, unlocks: [],
+    upgrades: { magnetDuration: 0, gearDuration: 0, dashCooldown: 0, startingRevives: 0, coinValue: 0 },
+    missions: {},
     stats: { runs: 0, coinsBankedTotal: 0, distanceTotalM: 0, smashesTotal: 0, bestComboCount: 0 },
   });
 });
 
-test('migrate v1 → v2 preserves highScore and adds empty containers', () => {
+test('migrate v1 → v3 preserves highScore and adds empty containers', () => {
   const out = migrate({ version: 1, highScore: 500 });
-  assert.equal(out.version, 2);
+  assert.equal(out.version, 3);
   assert.equal(out.highScore, 500);
   assert.equal(out.coins, 0);
   assert.deepEqual(out.unlocks, []);
-  assert.deepEqual(out.upgrades, {});
+  assert.deepEqual(out.upgrades, { magnetDuration: 0, gearDuration: 0, dashCooldown: 0, startingRevives: 0, coinValue: 0 });
   assert.deepEqual(out.missions, {});
   assert.equal(out.stats.runs, 0);
   assert.equal(out.stats.bestComboCount, 0);
@@ -30,7 +32,7 @@ test('migrate v1 → v2 preserves highScore and adds empty containers', () => {
 
 test('migrate treats missing version as v1', () => {
   const out = migrate({ highScore: 42 });
-  assert.equal(out.version, 2);
+  assert.equal(out.version, 3);
   assert.equal(out.highScore, 42);
 });
 
@@ -61,9 +63,9 @@ test('load returns defaults when empty or corrupt', () => {
   assert.deepEqual(load(fakeAdapter('{not json')), defaults());
 });
 
-test('load migrates a stored v1 blob to v2 preserving highScore', () => {
+test('load migrates a stored v1 blob to v3 preserving highScore', () => {
   const out = load(fakeAdapter(JSON.stringify({ version: 1, highScore: 777 })));
-  assert.equal(out.version, 2);
+  assert.equal(out.version, 3);
   assert.equal(out.highScore, 777);
 });
 
@@ -88,7 +90,7 @@ test('updateHighScore mutates + returns true on a new best, false otherwise', ()
 test('migrate tolerates a non-integer version (floors it, no crash)', () => {
   // A float version must not crash via MIGRATIONS[1.5]; it floors to v1 and migrates.
   const out = migrate({ version: 1.5, highScore: 5 });
-  assert.equal(out.version, 2);
+  assert.equal(out.version, 3);
   assert.equal(out.highScore, 5);
 });
 
@@ -105,4 +107,65 @@ test('createStorage falls back to in-memory when localStorage is absent (Node)',
   s.setItem('k', 'v');
   assert.equal(s.getItem('k'), 'v');
   assert.equal(s.getItem('missing'), null);
+});
+
+test('v3 defaults include named upgrade tiers at 0', () => {
+  const d = defaults();
+  assert.equal(d.version, 3);
+  assert.deepEqual(d.upgrades, {
+    magnetDuration: 0, gearDuration: 0, dashCooldown: 0, startingRevives: 0, coinValue: 0,
+  });
+  assert.deepEqual(d.unlocks, []);        // reserved container kept
+  assert.deepEqual(d.missions, {});       // reserved container kept
+});
+
+test('v2 -> v3 preserves coins/highScore/stats/unlocks and fills tiers', () => {
+  const v2 = {
+    version: 2, highScore: 563, coins: 41, unlocks: ['capRed'], upgrades: {}, missions: {},
+    stats: { runs: 9, coinsBankedTotal: 41, distanceTotalM: 1200, smashesTotal: 30, bestComboCount: 4 },
+  };
+  const m = migrate(v2);
+  assert.equal(m.version, 3);
+  assert.equal(m.highScore, 563);
+  assert.equal(m.coins, 41);
+  assert.deepEqual(m.unlocks, ['capRed']);
+  assert.equal(m.upgrades.magnetDuration, 0);
+  assert.equal(m.stats.runs, 9);
+});
+
+test('v1 -> v3 chain still works', () => {
+  const m = migrate({ version: 1, highScore: 77 });
+  assert.equal(m.version, 3);
+  assert.equal(m.highScore, 77);
+  assert.equal(m.upgrades.coinValue, 0);
+});
+
+test('fillDefaults sanitizes coins and highScore to non-negative integers', () => {
+  const m = migrate({ version: 3, highScore: '<img>', coins: -7, unlocks: [], upgrades: {}, missions: {}, stats: {} });
+  assert.equal(m.coins, 0);
+  assert.equal(m.highScore, 0);
+  const ok = migrate({ version: 3, highScore: 563.9, coins: '41', unlocks: [], upgrades: {}, missions: {}, stats: {} });
+  assert.equal(ok.coins, 41);
+  assert.equal(ok.highScore, 563);
+});
+
+test('tier sanitization: junk localStorage cannot break shop state', () => {
+  const m = migrate({
+    version: 3, highScore: 1, coins: 10, unlocks: [], missions: {}, stats: {},
+    upgrades: {
+      magnetDuration: '2',        // string -> floor/clamp or 0 (must be integer in 0..max)
+      gearDuration: NaN,          // NaN -> 0
+      dashCooldown: -5,           // negative -> 0
+      startingRevives: 99,        // over max -> clamped to 2
+      coinValue: 1.7,             // float -> integer 0..max
+      hacked: 12,                 // unknown key -> dropped
+    },
+  });
+  for (const v of Object.values(m.upgrades)) {
+    assert.ok(Number.isInteger(v) && v >= 0);
+  }
+  assert.equal(m.upgrades.gearDuration, 0);
+  assert.equal(m.upgrades.dashCooldown, 0);
+  assert.equal(m.upgrades.startingRevives, 2);     // maxTier('startingRevives')
+  assert.equal('hacked' in m.upgrades, false);
 });

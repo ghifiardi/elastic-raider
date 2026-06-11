@@ -19,9 +19,12 @@ import {
 import { createStorage } from './meta/storage.js';
 import { load, save, updateHighScore } from './meta/save.js';
 import { makeRunSummary, bankRun } from './meta/economy.js';
+import { effectsOf } from './meta/shop.js';
+import { createOverlay } from './ui/overlay.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+const playfield = document.getElementById('playfield');
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = VIEW.W * dpr;
@@ -31,6 +34,8 @@ function resize() {
   const fit = Math.min(window.innerWidth / VIEW.W, window.innerHeight / VIEW.H);
   canvas.style.width = `${VIEW.W * fit}px`;
   canvas.style.height = `${VIEW.H * fit}px`;
+  playfield.style.width = canvas.style.width;
+  playfield.style.height = canvas.style.height;
 }
 resize(); window.addEventListener('resize', resize);
 
@@ -42,7 +47,20 @@ const audio = createAudio();
 const input = createInput(window);
 
 const game = createGame();
-const saveData = load(storage);        // full v2 save object, persisted across runs in memory
+const saveData = load(storage);        // full v3 save object, persisted across runs in memory
+
+const shopButton = document.createElement('button');
+shopButton.id = 'shop-open';
+shopButton.textContent = '\u{1F6D2} SHOP';
+playfield.appendChild(shopButton);
+const overlay = createOverlay({
+  root: document.getElementById('overlay'),
+  openButton: shopButton,
+  saveData,
+  persist: () => save(storage, saveData),
+  input,
+});
+
 let run = null;
 let runCounter = 0;
 let lastResult = { score: 0, isNewBest: false, banked: 0, wallet: saveData.coins };
@@ -53,13 +71,15 @@ const PICKUPS = new Set(['gear', 'magnet', 'mult', 'revive']);
 function newRun() {
   const seed = (Date.now() ^ (runCounter++ * 2654435761)) >>> 0;
   const rng = createRng(seed);
+  const effects = effectsOf(saveData);          // run-start snapshot; never re-read mid-run
   run = {
     rng,
+    effects,
     player: createPlayer(),
     world: createWorld(rng),
     score: createScore(),
     combo: createCombo(),
-    powerups: createPowerups(),
+    powerups: createPowerups(effects),
     elapsed: 0,
     maxComboCount: 0,
   };
@@ -102,6 +122,8 @@ function overGap(p, entities) {
 function update(dt) {
   clock += dt;
   const actions = input.consume();
+  overlay.setButtonVisible(game.mode === MODES.MENU || game.mode === MODES.GAMEOVER);
+  if (overlay.isOpen()) return;        // snapshot already consumed and discarded
 
   if (game.mode === MODES.MENU || game.mode === MODES.GAMEOVER) {
     if (actions.jumpPressed) beginPlaying();
@@ -113,7 +135,7 @@ function update(dt) {
   tickPowerups(run.powerups, dt);
   const speed = runSpeed(run.elapsed) * speedScale(run.powerups);
 
-  updatePlayer(run.player, actions, dt);
+  updatePlayer(run.player, actions, dt, run.effects.dashCooldown);
   if (actions.jumpPressed) audio.jump();
 
   updateWorld(run.world, dt, speed);
@@ -129,7 +151,7 @@ function update(dt) {
     if (e.type === 'coin') {
       if (aabb(pb, e)) {
         e.collected = true;
-        addCoin(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups));
+        addCoin(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups), run.effects.coinValueMultiplier);
         audio.coin();
       }
       continue;

@@ -35,3 +35,16 @@ test('total combines floored distance and bonus', () => {
   addDistance(s, 10.9); addCoin(s, 2); addSmash(s, 1);
   assert.equal(total(s), 10 + COIN_SCORE * 2 + SMASH_SCORE * 1);
 });
+
+test('addCoin applies coinValueMultiplier to SCORE only, raw count unchanged', () => {
+  const s = createScore();
+  addCoin(s, 2, 1.75);              // combo mult 2, Gold Rush x1.75
+  assert.equal(s.coins, 1);         // raw pickup count — what bankRun banks
+  assert.equal(s.bonus, 35);        // COIN_SCORE 10 * 2 * 1.75
+});
+
+test('addCoin default multiplier preserves current behavior', () => {
+  const s = createScore();
+  addCoin(s, 3);
+  assert.equal(s.bonus, 30);
+});

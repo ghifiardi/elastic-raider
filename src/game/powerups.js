@@ -3,14 +3,23 @@ import {
   MULTIPLIER_VALUE, MAGNET_RADIUS, MAGNET_PULL_SPEED, REVIVE_SPEED_EASE,
 } from '../data/constants.js';
 
-export function createPowerups() {
-  return { gear: 0, magnet: 0, multiplier: 0, mercy: 0, revives: 0 };
+// effects is the run-start snapshot from shop.effectsOf(); omitted in tests
+// that exercise base behavior.
+export function createPowerups(effects = null) {
+  return {
+    gear: 0, magnet: 0, multiplier: 0, mercy: 0,
+    revives: effects?.startingRevives ?? 0,
+    config: {
+      gearDuration: GEAR_DURATION + (effects?.gearDurationBonus ?? 0),
+      magnetDuration: MAGNET_DURATION + (effects?.magnetDurationBonus ?? 0),
+    },
+  };
 }
 
 export function activate(s, type) {
   if (type === 'revive') { s.revives += 1; return; }
-  if (type === 'gear') s.gear = GEAR_DURATION;
-  else if (type === 'magnet') s.magnet = MAGNET_DURATION;
+  if (type === 'gear') s.gear = s.config.gearDuration;
+  else if (type === 'magnet') s.magnet = s.config.magnetDuration;
   else if (type === 'mult') s.multiplier = MULTIPLIER_DURATION;
 }
 

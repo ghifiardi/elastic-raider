@@ -61,3 +61,16 @@ test('dash on cooldown is ignored', () => {
   updatePlayer(p, { ...NONE, dashPressed: true }, 1 / 60);
   assert.equal(p.state, before);
 });
+
+test('updatePlayer uses the provided dash cooldown', () => {
+  const p = createPlayer();
+  updatePlayer(p, { dashPressed: true, jumpPressed: false, jumpHeld: false, slidePressed: false }, 1 / 60, 0.20);
+  assert.equal(p.state, 'dashing');
+  assert.equal(p.dashCooldown, 0.20);
+});
+
+test('updatePlayer defaults to base DASH_COOLDOWN', () => {
+  const p = createPlayer();
+  updatePlayer(p, { dashPressed: true, jumpPressed: false, jumpHeld: false, slidePressed: false }, 1 / 60);
+  assert.equal(p.dashCooldown, 0.35);
+});

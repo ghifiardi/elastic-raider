@@ -11,7 +11,7 @@ export function createPlayer() {
   };
 }
 
-export function updatePlayer(player, actions, dt) {
+export function updatePlayer(player, actions, dt, dashCooldown = DASH_COOLDOWN) {
   // Timers
   if (player.dashCooldown > 0) player.dashCooldown = Math.max(0, player.dashCooldown - dt);
 
@@ -19,7 +19,7 @@ export function updatePlayer(player, actions, dt) {
   if (actions.dashPressed && player.state !== 'dashing' && player.dashCooldown <= 0) {
     player.state = 'dashing';
     player.dashTimer = DASH_DURATION;
-    player.dashCooldown = DASH_COOLDOWN;
+    player.dashCooldown = dashCooldown;
   }
   if (player.state === 'dashing') {
     player.dashTimer -= dt;
