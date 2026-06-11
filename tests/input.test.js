@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGestureTracker } from '../src/engine/input.js';
+import { createGestureTracker, createInput } from '../src/engine/input.js';
 
 const NONE = { jumpPressed: false, slidePressed: false, dashPressed: false };
 
@@ -147,4 +147,33 @@ test('id reuse after a lost up: stale hold does not leak', () => {
   // up(1) is lost (e.g., app backgrounded mid-touch); browser reuses id 1
   tr.down(1, 200, 200, 1000);
   assert.equal(tr.jumpHeld, false);  // stale hold cleared by down()
+});
+
+function touchEvent(type, id, x, y) {
+  const e = new Event(type);
+  e.changedTouches = [{ identifier: id, clientX: x, clientY: y }];
+  return e;
+}
+
+test('createInput: fast tap via DOM events produces jumpPressed once', () => {
+  const target = new EventTarget();
+  const input = createInput(target);
+  target.dispatchEvent(touchEvent('touchstart', 1, 100, 100));
+  target.dispatchEvent(touchEvent('touchend', 1, 100, 100));
+  const a = input.consume();
+  assert.equal(a.jumpPressed, true);
+  assert.equal(input.consume().jumpPressed, false); // one-shot cleared
+});
+
+test('createInput: keyboard space sets jumpPressed and jumpHeld', () => {
+  const target = new EventTarget();
+  const input = createInput(target);
+  const kd = new Event('keydown'); kd.code = 'Space';
+  target.dispatchEvent(kd);
+  const a = input.consume();
+  assert.equal(a.jumpPressed, true);
+  assert.equal(a.jumpHeld, true);
+  const ku = new Event('keyup'); ku.code = 'Space';
+  target.dispatchEvent(ku);
+  assert.equal(input.consume().jumpHeld, false);
 });
