@@ -48,3 +48,15 @@ test('addCoin default multiplier preserves current behavior', () => {
   addCoin(s, 3);
   assert.equal(s.bonus, 30);
 });
+
+test('addCoin returns the awarded bonus points', () => {
+  const s = createScore();
+  assert.equal(addCoin(s, 2, 1.75), 35);
+  assert.equal(s.bonus, 35);                       // mutation unchanged
+});
+
+test('addSmash returns the awarded bonus points', () => {
+  const s = createScore();
+  assert.equal(addSmash(s, 3), 150);               // SMASH_SCORE 50 * 3
+  assert.equal(s.bonus, 150);
+});
