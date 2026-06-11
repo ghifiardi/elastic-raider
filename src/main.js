@@ -19,6 +19,7 @@ import {
 import { createStorage } from './meta/storage.js';
 import { load, save, updateHighScore } from './meta/save.js';
 import { makeRunSummary, bankRun } from './meta/economy.js';
+import { effectsOf } from './meta/shop.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -53,13 +54,15 @@ const PICKUPS = new Set(['gear', 'magnet', 'mult', 'revive']);
 function newRun() {
   const seed = (Date.now() ^ (runCounter++ * 2654435761)) >>> 0;
   const rng = createRng(seed);
+  const effects = effectsOf(saveData);          // run-start snapshot; never re-read mid-run
   run = {
     rng,
+    effects,
     player: createPlayer(),
     world: createWorld(rng),
     score: createScore(),
     combo: createCombo(),
-    powerups: createPowerups(),
+    powerups: createPowerups(effects),
     elapsed: 0,
     maxComboCount: 0,
   };
@@ -113,7 +116,7 @@ function update(dt) {
   tickPowerups(run.powerups, dt);
   const speed = runSpeed(run.elapsed) * speedScale(run.powerups);
 
-  updatePlayer(run.player, actions, dt);
+  updatePlayer(run.player, actions, dt, run.effects.dashCooldown);
   if (actions.jumpPressed) audio.jump();
 
   updateWorld(run.world, dt, speed);
@@ -129,7 +132,7 @@ function update(dt) {
     if (e.type === 'coin') {
       if (aabb(pb, e)) {
         e.collected = true;
-        addCoin(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups));
+        addCoin(run.score, multiplier(run.combo) * scoreMultiplier(run.powerups), run.effects.coinValueMultiplier);
         audio.coin();
       }
       continue;
