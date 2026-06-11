@@ -76,7 +76,7 @@ In the smash branch, capture `multiplier(run.combo)` BEFORE `registerSmash()`, c
 | every frame | `fx.update(dt)`; freeze gate before simulation |
 | render | `renderer.fxLayer(fx.state)` after entities, before HUD; shake translate wraps world+entities+player (HUD NOT shaken); `phase` from `skyPhase(distanceM)` threaded to background |
 
-`createFx(run.rng)` is per-run (created in `newRun()`); a separate menu instance is unnecessary — no fx on menu.
+`createFx(createRng(seed ^ 0x9e3779b9))` is per-run (created in `newRun()`) with its **own RNG instance** — it must NOT share `run.rng`, or fx draws would consume values from the spawn stream and change world generation (violating the zero-gameplay-change constraint). A separate menu instance is unnecessary — no fx on menu.
 
 ## 7. Testing
 
